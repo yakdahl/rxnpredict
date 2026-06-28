@@ -25,7 +25,7 @@ for (const key of ligs) {
   });
   await page.evaluate(() => window.__metaldepict.relax(2));
   await page.waitForTimeout(120);
-  await page.screenshot({ path: "/tmp/panel_" + key + ".png" });
+  await page.screenshot({ path: (process.env.PANEL_PREFIX || "/tmp/panel_") + key + ".png" });
   console.log("rendered", key);
   await page.close();
 }
