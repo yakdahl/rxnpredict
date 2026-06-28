@@ -181,6 +181,28 @@
         }
     });
 
+    // restorative EXOCYCLIC angle springs: keep a substituent pointing radially
+    // (~120 deg) off a ring/group body by springing it against that ring atom's
+    // in-body neighbours. This is the "bit of physics" that nudges bond
+    // angles/lengths back to ideal after the user drags things around.
+    const t120 = Math.sqrt(2 * L0 * L0 - 2 * L0 * L0 * Math.cos(120 * Math.PI / 180));
+    joints.forEach(J => {
+      [[J.ba, J.la, J.lb], [J.bb, J.lb, J.la]].forEach(([body, lin, lout]) => {
+        if (body.local.length < 2 || !lin || !lout) return;     // only ring/group bodies
+        const cid = +lin.key.slice(2);
+        const subNode = nodeByKey.get(lout.key);
+        if (!subNode) return;
+        M.bonds.forEach(bd => {
+          const nb = bd.a === cid ? bd.b : (bd.b === cid ? bd.a : null);
+          if (nb == null) return;
+          const nl = body.local.find(l => l.key === "a:" + nb);
+          const nbNode = nodeByKey.get("a:" + nb);
+          if (!nl || !nbNode) return;                            // neighbour must be in same body
+          angleSprings.push({ oi: subNode, oj: nbNode, target: t120 });
+        });
+      });
+    });
+
     const excl = new Set();
     edges.forEach(e => excl.add(pk(e.na, e.nb)));
     let c0x = 0, c0y = 0; nodes.forEach(n => { c0x += n.ref.x; c0y += n.ref.y; });

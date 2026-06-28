@@ -367,10 +367,24 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
     # The one real stereo element is the biaryl axis; published bisphosphine
     # drawings denote it by drawing the central biaryl bond BOLD, so we flag it
     # as `axis` rather than inventing wedges on the flanking bonds.
+    # explicit Kekule double bonds (not aromatic "1.5" half-lines)
+    korder: dict[tuple[int, int], float] = {}
+    try:
+        kmol = Chem.Mol(mol)
+        Chem.Kekulize(kmol, clearAromaticFlags=True)
+        for b in kmol.GetBonds():
+            korder[(b.GetBeginAtomIdx(), b.GetEndAtomIdx())] = b.GetBondTypeAsDouble()
+    except Exception:
+        pass
+
     bonds = []
     for b in mol.GetBonds():
         ai, bi = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
         btype, order = _bond_type(b)
+        if btype == "aromatic":                 # -> explicit single/double (Kekule)
+            od = korder.get((ai, bi)) or korder.get((bi, ai)) or 1.0
+            order = 2.0 if od >= 2.0 else 1.0
+            btype = "double" if order == 2.0 else "single"
         is_axis = bool(biaryl) and {ai, bi} == biaryl_set
         wedge, a0 = "none", ai
         if (ai, bi) in wedge_map:
