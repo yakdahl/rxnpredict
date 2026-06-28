@@ -28,8 +28,15 @@ sys.path.insert(0, str(HERE))
 import relax_harness as R          # noqa: E402
 import relaxer_energy              # noqa: E402
 
+# GLOBAL energy weights (round-2 optimum): generalise to ANY ligand with a
+# template builder -- no per-ligand re-optimisation needed.
+GLOBAL = {"w_bond": 7.96, "w_angle": 0.61, "w_overlap": 17.49,
+          "w_rigid": 67.3, "maxiter": 164}
+
 # Per-ligand energy-term weights, black-box-optimised (scipy differential
 # evolution) against the crowd-aware numerical judge, one set per molecule.
+# Most ligands are happy with GLOBAL; only the bulkiest (four DTBM aryls in 2D)
+# get a dedicated set so the optimiser can push the overlap weight as needed.
 PER_LIGAND_WEIGHTS = {
     "dtbm_segphos": {"w_bond": 12.97, "w_angle": 3.95, "w_overlap": 18.55,
                      "w_rigid": 56.86, "maxiter": 176},
@@ -39,6 +46,20 @@ PER_LIGAND_WEIGHTS = {
                      "w_rigid": 50.92, "maxiter": 145},
     "ph_bpe":       {"w_bond": 18.84, "w_angle": 0.002, "w_overlap": 15.31,
                      "w_rigid": 12.52, "maxiter": 196},
+    # --- DTBM analogues + DPPBz ---
+    "dppbz":         GLOBAL,                   # global weights suffice
+    "dtbm_dppbz":    GLOBAL,                   # global weights suffice
+    "dtbm_xantphos": {"w_bond": 7.16, "w_angle": 2.43, "w_overlap": 4.91,
+                      "w_rigid": 51.89, "maxiter": 151},
+    "dtbm_dpephos":  {"w_bond": 2.33, "w_angle": 3.35, "w_overlap": 20.66,
+                      "w_rigid": 71.75, "maxiter": 185},
+}
+
+# the two montages this driver writes (classic four + the new DTBM/DPPBz variants)
+GROUPS = {
+    "method_c_refined": ["dtbm_segphos", "xantphos", "dpephos", "ph_bpe"],
+    "method_c_dtbm_variants": ["dppbz", "dtbm_dppbz", "dtbm_dpephos",
+                               "dtbm_xantphos"],
 }
 
 
@@ -49,10 +70,9 @@ def build(key):
     return H
 
 
-def main():
+def render_group(name, keys):
     outdir = HERE / "out" / "relaxed"
     outdir.mkdir(parents=True, exist_ok=True)
-    keys = list(PER_LIGAND_WEIGHTS)
     svgs, pngs = [], []
     for key in keys:
         H = build(key)
@@ -75,14 +95,18 @@ def main():
             "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 18)
     except Exception:
         font = ImageFont.load_default()
-    d.text((8, 5), "Method C (refined): template + per-ligand-optimised energy "
-                   "relaxer", fill="black", font=font)
+    d.text((8, 5), f"Method C (refined): {name}", fill="black", font=font)
     for idx, im in enumerate(imgs):
         r, c = divmod(idx, 2)
         panel.paste(im, (pad + c * (w + pad), 26 + pad + r * (h + pad)))
-    dest = HERE.parent / "panels" / "method_c_refined.png"
+    dest = HERE.parent / "panels" / f"{name}.png"
     panel.save(dest)
     print("montage ->", dest)
+
+
+def main():
+    for name, keys in GROUPS.items():
+        render_group(name, keys)
 
 
 if __name__ == "__main__":
