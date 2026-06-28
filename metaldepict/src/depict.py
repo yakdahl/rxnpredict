@@ -292,7 +292,13 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
     # and the metal) by matching unique canonical rank.  This avoids the bug of
     # treating any size-2 rank class as a pair -- two equivalent atoms in the
     # *same* half must not be reflected onto each other.
-    mirror_pairs = _c2_mirror_pairs(mol, ranks, metal, biaryl)
+    # Primary: the true molecular C2 from a graph automorphism that swaps the two
+    # P donors and is an involution (works for every backbone -- biaryl, ether,
+    # xanthene, alkyl). Fallbacks keep the older biaryl-cut / rank heuristics.
+    donor_pair = sorted(donors)
+    mirror_pairs = _c2_mirror_pairs_auto(mol, metal, donor_pair)
+    if not mirror_pairs:
+        mirror_pairs = _c2_mirror_pairs(mol, ranks, metal, biaryl)
     if not mirror_pairs:
         mirror_pairs = [sorted(v) for v in classes.values() if len(v) == 2]
     if biaryl:
@@ -421,6 +427,41 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
             "point_group_hint": "C2",
         },
     }
+
+
+def _c2_mirror_pairs_auto(mol, metal, donor_pair):
+    """
+    The molecular C2 as a graph automorphism: among all self-substructure
+    matches, find an involution that fixes the metal and *swaps* the two P
+    donors. The atom pairs it moves (i -> perm[i] != i) are the C2 mirror pairs.
+    Bounded by maxMatches; symmetric tBu methyls only inflate the count, they do
+    not break the search.
+    """
+    if len(donor_pair) != 2:
+        return []
+    d0, d1 = donor_pair
+    n = mol.GetNumAtoms()
+    try:
+        matches = mol.GetSubstructMatches(mol, uniquify=False,
+                                          maxMatches=50000, useChirality=False)
+    except Exception:
+        return []
+    best = None
+    for m in matches:
+        if len(m) != n:
+            continue
+        if m[d0] != d1 or m[d1] != d0:
+            continue
+        if metal is not None and m[metal] != metal:
+            continue
+        if any(m[m[i]] != i for i in range(n)):     # must be an involution
+            continue
+        pairs = sorted({tuple(sorted((i, m[i]))) for i in range(n) if m[i] != i})
+        # prefer the automorphism that moves the most atoms (the real C2, not a
+        # local swap that leaves a whole arm fixed)
+        if best is None or len(pairs) > len(best):
+            best = pairs
+    return [list(p) for p in best] if best else []
 
 
 def _c2_mirror_pairs(mol, ranks, metal, biaryl):

@@ -57,7 +57,7 @@
   // the label has room); metal/dative/double are NOT shortened -> uniform bonds
   function lenFactor(type) {
     if (type === "super") return 1.4;      // room for the abbreviation label
-    if (type === "dative") return 1.25;    // M-P coordination bonds are legitimately longer
+    if (type === "dative") return 1.35;    // M-P coordination bonds are legitimately longer
     return 1.0;                            // everything else: one standard length
   }
   // chord of a regular n-gon between vertices k edges apart (edge = L0)
@@ -153,6 +153,14 @@
     M.atoms.forEach(a => { if (!hidden.has(a.id) && !inSeg.has(a.id)) addBody(["a:" + a.id], [atom.get(a.id)]); });
     collapsed.forEach(g => addBody(["g:" + g.id], [sup.get(g.id)]));
     nodes.forEach(n => { n._body = bodyOfKey.get(n.key); });
+    // PIN the metal and the hydride: the template places Cu at the centre with a
+    // horizontal Cu-H (H to the right); pinning both keeps that bond exactly
+    // horizontal while every other fragment relaxes/de-overlaps around it. The
+    // P-Cu dative bonds then settle to the two pinned-Cu donor directions.
+    const cuBody = bodyOfKey.get("a:" + metalId);
+    if (cuBody && cuBody.local.length === 1) cuBody.pinned = true;
+    const hBody = bodyOfKey.get("a:" + hydrideId);
+    if (hBody && hBody.local.length === 1) hBody.pinned = true;
 
     // joints = bonds whose endpoints are in different bodies (intra-body = rigid)
     const joints = [];
@@ -249,8 +257,16 @@
       if (S.oj._body) applyForce(S.oj._body, B.x, B.y, -fx, -fy);
     });
 
-    // repulsion between atoms of different, non-bonded bodies
+    // repulsion between atoms of different, non-bonded bodies.
+    // Two parts (mandatory fix 2 -- drive OVERLAPPING atoms apart):
+    //   * a soft long-range 1/d^2 spread term scaled by the user slider, and
+    //   * a STRONG, slider-INDEPENDENT short-range penalty that activates only
+    //     when two glyphs actually overlap (d < minD).  The penalty grows as the
+    //     square of the penetration so deeply overlapping atoms/labels are shoved
+    //     hard apart, while atoms that are merely close are left alone -- the
+    //     template geometry is otherwise preserved.
     const kRep = repScale * relaxBoost * 2.2 * L0 * L0;
+    const kHard = 3.0 * L0 * L0;          // not scaled by the slider: always on
     for (let i = 0; i < nodes.length; i++) {
       const a = nodes[i], A = a.ref, ba = a._body;
       for (let j = i + 1; j < nodes.length; j++) {
@@ -262,7 +278,10 @@
         if (d2 < 1e-6) { dx = (i - j) * 1e-3 || 1e-3; dy = 1e-3; d2 = dx * dx + dy * dy; }
         const d = Math.sqrt(d2), minD = a.r + b.r;
         let f = kRep / d2;
-        if (d < minD) f += 0.5 * (minD - d) / d;
+        if (d < minD) {
+          const pen = (minD - d) / minD;            // 0..1 penetration fraction
+          f += kHard * pen * pen / Math.max(d, 0.15 * L0);   // hard de-overlap
+        }
         const fx = f * dx / d, fy = f * dy / d;
         if (ba) applyForce(ba, A.x, A.y, -fx, -fy);
         if (b._body) applyForce(b._body, B.x, B.y, fx, fy);
@@ -443,7 +462,7 @@
         fx += vx * labelInset(from); fy += vy * labelInset(from);
         txx -= vx * (labelInset(to) + 0.12 * BL); tyy -= vy * (labelInset(to) + 0.12 * BL);
         el("line", { x1: fx, y1: fy, x2: txx, y2: tyy, stroke: "#444",
-          "stroke-width": SW, "marker-end": "url(#arrow)" }, gBonds);
+          "stroke-width": SW, "stroke-linecap": "round", "marker-end": "url(#arrow)" }, gBonds);
         return;
       }
       if (showWedge && (e.type !== "super") && (e.wedge === "up" || e.wedge === "down")) {
@@ -466,8 +485,10 @@
       }
 
       const stroke = "#1a1d22", sw = e.axis ? BOLDW : SW;   // bold = biaryl axis
+      // ROUND caps + joins so bonds meeting at a bare vertex overlap cleanly --
+      // no sliver of background shows through the junction (mandatory fix 1).
       const drawLine = (ox, oy) => el("line", { x1: x1 + ox, y1: y1 + oy, x2: x2 + ox, y2: y2 + oy,
-        stroke, "stroke-width": sw, "stroke-linecap": "butt" }, gBonds);
+        stroke, "stroke-width": sw, "stroke-linecap": "round", "stroke-linejoin": "round" }, gBonds);
       // pick the perpendicular pointing to the ring interior (double bond inside)
       let ox = px, oy = py;
       const ins = (e.na.id != null && e.nb.id != null)
@@ -479,7 +500,7 @@
         const o = DGAP, s = 0.14;
         el("line", { x1: x1 + ox * o + ux * L * s, y1: y1 + oy * o + uy * L * s,
           x2: x2 + ox * o - ux * L * s, y2: y2 + oy * o - uy * L * s,
-          stroke, "stroke-width": SW, "stroke-linecap": "butt" }, gBonds);
+          stroke, "stroke-width": SW, "stroke-linecap": "round", "stroke-linejoin": "round" }, gBonds);
       } else {
         drawLine(0, 0);
       }
@@ -528,7 +549,8 @@
     if (n.kind === "super") return n.label.length * curBL * 0.16 + curBL * 0.1;
     if (n.id === metalId) return curBL * 0.34;
     if (LABEL_ELEMENTS.has(n.el) || n.id === hydrideId) return curBL * 0.30;
-    return curBL * 0.02;
+    return 0;   // bare carbon vertex: bond ends EXACTLY at the atom (round caps
+                // then make the two bonds overlap -- no white sliver, fix 1)
   }
   // charge as drawn line shapes (never a font glyph), centred in the badge circle
   function drawCharge(g, X, Y, r, q) {
@@ -676,6 +698,7 @@
   window.__metaldepict = {
     relax: (n) => { relax(n || 200, true); alignCuH(); render(); },
     setLevel: (lv) => { LEVEL = lv; buildView(); relax(90, true); alignCuH(); fit(); render(); },
+    setSpread: (v) => { repScale = v; },
     fit: () => { fit(); render(); },
     overlapScore, metrics, view: () => view, stop: () => { running = false; }
   };
