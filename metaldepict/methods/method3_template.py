@@ -182,8 +182,12 @@ def _xanthene_backbone(sc, c):
                 if not (set((b.a, b.b)) <= set(py))]
     for k in range(6):
         sc.bond(py[k], py[(k + 1) % 6], order=1)
-    cQ = py[0]    # right vertex -> C(CH3)2
-    cO = py[3]    # left vertex  -> O
+    # CONNECTIVITY: in 4,5-bis(phosphino)xanthene the two P's sit PERI TO THE
+    # OXYGEN (positions 4,5).  So the O bridgehead must face the metal pocket
+    # (right) and C(CH3)2 the far side (left) -- then the benzo carbon nearest
+    # each P is the one ortho to the O-bearing fusion carbon, i.e. peri to O.
+    cO = py[0]    # right vertex (metal side) -> O bridgehead
+    cQ = py[3]    # left  vertex (far side)   -> C(CH3)2
     sc.atoms[cO].label = "O"
     sc.atoms[cO].color = O_COL
     # the two upper carbons py[1](60deg) & py[2](120deg) are the shared edge of
@@ -191,17 +195,17 @@ def _xanthene_backbone(sc, c):
     # Fuse upper benzo onto edge (py[1]-py[2]); fuse lower onto edge (py[5]-py[4]).
     bu = _fuse_benzo(sc, py[2], py[1], cen)     # upper ring (above the edge)
     bd = _fuse_benzo(sc, py[4], py[5], cen)     # lower ring (below the edge)
-    # P attaches to the outer ortho carbon of each benzo ring (the one nearest P)
-    # _fuse_benzo returns ring ids with [0],[1] == the two shared (re-used) atoms
-    # and 2,3,4,5 the new ones going around.  The carbon ortho to the shared
-    # edge on the metal (right) side carries P.
+    # P attaches to the benzo carbon ortho to the O-side fusion carbon (peri to
+    # O).  With O at py[0] that O-side carbon is py[1] (upper) / py[5] (lower),
+    # which sit on the metal (right) side -- so "nearest P" now lands correctly.
     pu_aryl = _benzo_p_vertex(sc, bu, c["pu"])
     pd_aryl = _benzo_p_vertex(sc, bd, c["pd"])
     sc.bond(c["pu"], pu_aryl, order=1)
     sc.bond(c["pd"], pd_aryl, order=1)
-    # C(CH3)2 methyls -- point right toward the metal/open space
-    text_arm(sc, cQ, 30, "CH₃", length=1.05, fontscale=0.78)
-    text_arm(sc, cQ, -30, "CH₃", length=1.05, fontscale=0.78)
+    # C(CH3)2 methyls -- point left, away from the metal/backbone (fanned wide
+    # enough that the two CH3 labels clear each other)
+    text_arm(sc, cQ, 140, "CH₃", length=1.1, fontscale=0.78)
+    text_arm(sc, cQ, 220, "CH₃", length=1.1, fontscale=0.78)
     return sc
 
 
@@ -250,16 +254,19 @@ def _dpephos_backbone(sc, c):
     _pphos_phenyls(sc, c)
     cu_b = (1.0, 1.72)
     cd_b = (1.0, -1.72)
-    bu = place_hexagon(sc, cu_b, 30, kek_offset=0)
-    bd = place_hexagon(sc, cd_b, -30, kek_offset=0)
+    # CONNECTIVITY: DPEphos = (2-Ph2P-phenyl)2O, so on each ring P is ORTHO to
+    # the ether O.  Orient each hexagon so the P-ipso vertex points at its P
+    # (toward the metal) and the ADJACENT vertex toward the hinge carries O.
+    bu = place_hexagon(sc, cu_b, -30, kek_offset=0)   # upper: P=bu[0]@330, O@270
+    bd = place_hexagon(sc, cd_b, 30, kek_offset=0)    # lower: P=bd[0]@30,  O@90
     sc.bond(c["pu"], bu[0], order=1)
     sc.bond(c["pd"], bd[0], order=1)
-    up_botL = bu[3]    # 210 bottom-left of upper ring
-    dn_topL = bd[3]    # 150 top-left of lower ring
-    o_mid = vscale(vadd(sc.atoms[up_botL].pos, sc.atoms[dn_topL].pos), 0.5)
+    up_Oc = bu[5]      # 270 bottom vertex, ortho to P-ipso, toward the hinge
+    dn_Oc = bd[1]      # 90  top vertex,    ortho to P-ipso, toward the hinge
+    o_mid = vscale(vadd(sc.atoms[up_Oc].pos, sc.atoms[dn_Oc].pos), 0.5)
     oid = sc.atom((o_mid[0] - 0.15 * L, o_mid[1]), label="O", color=O_COL)
-    sc.bond(up_botL, oid, order=1)
-    sc.bond(dn_topL, oid, order=1)
+    sc.bond(up_Oc, oid, order=1)
+    sc.bond(dn_Oc, oid, order=1)
     return sc
 
 
