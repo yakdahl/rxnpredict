@@ -30,7 +30,7 @@
   const donorSet = new Set(M.metal.donors);
 
   let LEVEL = "l1", running = true, showWedge = true, showCharge = true,
-      showAllH = false, enforceSym = false, repScale = 0.45;
+      showAllH = false, enforceSym = true, repScale = 0.55;
 
   // characteristic bond length (world units) from the initial layout
   let L0 = (function () {
@@ -46,20 +46,21 @@
   // ----------------------------------------------------------- view graph
   let view = null;
   function nodeRadius(kind, el, label) {
-    if (kind === "super") return (0.55 + 0.16 * (label ? label.length : 3)) * L0;
+    if (kind === "super") return (0.95 + 0.22 * (label ? label.length : 3)) * L0;
     if (el === "Cu") return 0.62 * L0;
     if (LABEL_ELEMENTS.has(el) || el === "H") return 0.46 * L0;
-    return 0.34 * L0;
+    return 0.40 * L0;
   }
-  function restLength(type) {
-    switch (type) {
-      case "dative": return 1.55 * L0;     // P -> Cu
-      case "metalH": return 1.15 * L0;     // Cu - H
-      case "super":  return 1.55 * L0;
-      case "double": return 0.90 * L0;
-      default:       return 1.00 * L0;     // single / aromatic
-    }
+  let relaxBoost = 1.0;   // annealing multiplier on repulsion during relax()
+  // every drawn bond is one standard length (superatom bonds a touch longer so
+  // the label has room); metal/dative/double are NOT shortened -> uniform bonds
+  function lenFactor(type) {
+    if (type === "super") return 1.4;      // room for the abbreviation label
+    if (type === "dative") return 1.25;    // M-P coordination bonds are legitimately longer
+    return 1.0;                            // everything else: one standard length
   }
+  // chord of a regular n-gon between vertices k edges apart (edge = L0)
+  function chord(k, n) { return L0 * Math.sin(k * Math.PI / n) / Math.sin(Math.PI / n); }
 
   function buildView() {
     const collapsed = LEVEL === "l1" ? M.groups.filter(g => g.level === 1)
@@ -103,7 +104,8 @@
       const na = ensureNode(ka), nb = ensureNode(kb);
       const k = ka < kb ? ka + "|" + kb : kb + "|" + ka;
       if (edgeMap.has(k)) return;
-      let type = b.type, order = b.order, wedge = b.wedge, a0 = b.a, b0 = b.b;
+      let type = b.type, order = b.order, wedge = b.wedge;
+      const a0 = (b.a0 !== undefined ? b.a0 : b.a), b0 = (a0 === b.a ? b.b : b.a);
       if (na.kind === "super" || nb.kind === "super") { type = "super"; order = 1; wedge = "none"; }
       else if (b.type === "dative") { type = "dative"; }
       else if ((b.a === metalId && b.b === hydrideId) || (b.b === metalId && b.a === hydrideId)) type = "metalH";
@@ -111,108 +113,133 @@
     });
     const edges = [...edgeMap.values()];
 
-    // neighbour map + 1-3 angle pairs
+    const pk = (a, b) => a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key;
+
+    // ---- HARD constraints: uniform bonds + regular-polygon rings ----
+    const hard = [];
+    edges.forEach(e => hard.push({ a: e.na, b: e.nb, d: L0 * lenFactor(e.type) }));
+    const ringPair = new Set();
+    (M.rings || []).forEach(ring => {
+      if (ring.some(id => hidden.has(id))) return;          // ring not fully visible
+      const ns = ring.map(id => nodeByKey.get("a:" + id));
+      if (ns.some(x => !x)) return;
+      const n = ns.length;
+      for (let i = 0; i < n; i++)
+        for (let j = i + 1; j < n; j++) {
+          let k = j - i; k = Math.min(k, n - k);
+          hard.push({ a: ns[i], b: ns[j], d: chord(k, n) });
+          ringPair.add(pk(ns[i], ns[j]));
+        }
+    });
+
+    // ---- SOFT constraints: 1-3 bond angles (flex a little to de-overlap) ----
     const nbr = new Map(nodes.map(n => [n.key, []]));
     edges.forEach(e => { nbr.get(e.na.key).push(e); nbr.get(e.nb.key).push(e); });
-    const pairs13 = [];
+    const angles = [];
     nodes.forEach(c => {
+      if (c.kind !== "atom") return;                        // angles about real atoms
       const es = nbr.get(c.key);
+      const ang = (c.data.angle_deg || 120) * Math.PI / 180;
       for (let i = 0; i < es.length; i++)
         for (let j = i + 1; j < es.length; j++) {
           const oi = es[i].na === c ? es[i].nb : es[i].na;
           const oj = es[j].na === c ? es[j].nb : es[j].na;
-          // target distance: metal centre -> ideal angle; else preserve current
-          let target;
-          const li = restLength(es[i].type), lj = restLength(es[j].type);
-          if (c.kind === "atom" && c.id === metalId) {
-            const ang = 120 * Math.PI / 180;
-            target = Math.sqrt(li * li + lj * lj - 2 * li * lj * Math.cos(ang));
-          } else {
-            target = Math.hypot(oi.ref.x - oj.ref.x, oi.ref.y - oj.ref.y);
-            target = Math.max(0.7 * L0, target);
-          }
-          pairs13.push({ i: oi, j: oj, target });
+          if (ringPair.has(pk(oi, oj))) continue;            // ring already fixes it (hard)
+          const li = L0 * lenFactor(es[i].type), lj = L0 * lenFactor(es[j].type);
+          const target = Math.sqrt(li * li + lj * lj - 2 * li * lj * Math.cos(ang));
+          // the metal's trigonal angles are HARD -> a clean 120 deg coordination
+          if (c.id === metalId) hard.push({ a: oi, b: oj, d: target });
+          else angles.push({ i: oi, j: oj, target });
         }
     });
 
-    // excluded pairs for repulsion (bonded + 1-3)
+    // excluded pairs for repulsion (anything already geometrically constrained)
+    // -- but bulky abbreviation superatoms must still repel their 1-3 siblings,
+    // otherwise two DTBM groups on the same P collapse onto each other.
     const excl = new Set();
-    const pk = (a, b) => a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key;
-    edges.forEach(e => excl.add(pk(e.na, e.nb)));
-    pairs13.forEach(p => excl.add(pk(p.i, p.j)));
+    hard.forEach(c => excl.add(pk(c.a, c.b)));   // bonded/ring pairs never repel
+    // 1-3 angle pairs normally don't repel, but a bulky superatom must repel its
+    // siblings so two DTBM groups on one P don't collapse together.
+    angles.forEach(p => { if (p.i.kind !== "super" && p.j.kind !== "super") excl.add(pk(p.i, p.j)); });
 
-    view = { nodes, nodeByKey, edges, pairs13, excl, keyForAtom };
+    let c0x = 0, c0y = 0; nodes.forEach(n => { c0x += n.ref.x; c0y += n.ref.y; });
+    const centroid0 = { x: c0x / nodes.length, y: c0y / nodes.length };
+    view = { nodes, nodeByKey, edges, hard, angles, excl, keyForAtom, pk, centroid0 };
   }
 
   function nodeForAtom(id) { return view.nodeByKey.get(view.keyForAtom(id)); }
 
   // ---------------------------------------------------------------- physics
+  // Hybrid Position-Based Dynamics, strictly 2D:
+  //   soft pass  -> angle springs + gentle repulsion (the "little relaxation"
+  //                 that keeps things from being locked into an overlap)
+  //   hard pass  -> project bond + ring constraints so bond lengths stay uniform
+  //                 and every ring stays a regular polygon.
   function step(dt) {
     const nodes = view.nodes;
     nodes.forEach(n => { n.fx = 0; n.fy = 0; });
 
-    // 1-2 bond springs
-    const K12 = 0.55;
-    view.edges.forEach(e => {
-      const A = e.na.ref, B = e.nb.ref;
-      let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
-      const rest = restLength(e.type);
-      const f = K12 * (d - rest) / d;
-      const fx = f * dx, fy = f * dy;
-      e.na.fx += fx; e.na.fy += fy; e.nb.fx -= fx; e.nb.fy -= fy;
-    });
-
-    // 1-3 angle springs
-    const K13 = 0.22;
-    view.pairs13.forEach(p => {
+    // soft: 1-3 angle springs (flexible)
+    const K13 = 0.18;
+    view.angles.forEach(p => {
       const A = p.i.ref, B = p.j.ref;
       let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
       const f = K13 * (d - p.target) / d;
-      const fx = f * dx, fy = f * dy;
-      p.i.fx += fx; p.i.fy += fy; p.j.fx -= fx; p.j.fy -= fy;
+      p.i.fx += f * dx; p.i.fy += f * dy; p.j.fx -= f * dx; p.j.fy -= f * dy;
     });
 
-    // repulsion + collision (de-overlap)
-    const kRep = repScale * 2.4 * L0 * L0;
+    // soft: repulsion to spread overlapping, non-bonded fragments
+    // (relaxBoost anneals this high early in relax() to untangle, then eases)
+    const kRep = repScale * relaxBoost * 2.6 * L0 * L0;
     for (let i = 0; i < nodes.length; i++) {
       const a = nodes[i], A = a.ref;
       for (let j = i + 1; j < nodes.length; j++) {
         const b = nodes[j], B = b.ref;
-        const key = a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key;
+        if (view.excl.has(a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key)) continue;
         let dx = B.x - A.x, dy = B.y - A.y, d2 = dx * dx + dy * dy;
-        if (d2 < 1e-6) { dx = (Math.random() - 0.5) * 0.01; dy = (Math.random() - 0.5) * 0.01; d2 = dx * dx + dy * dy; }
-        const d = Math.sqrt(d2);
-        const minD = a.r + b.r;
-        if (!view.excl.has(key)) {
-          // soft long-range repulsion
-          let f = kRep / d2;
-          // hard collision when bounding circles overlap (this is what spreads fragments)
-          if (d < minD) f += 0.9 * (minD - d) / d;
-          const fx = f * dx / d, fy = f * dy / d;
-          a.fx -= fx; a.fy -= fy; b.fx += fx; b.fy += fy;
-        }
+        if (d2 < 1e-6) { dx = (i - j) * 1e-3 || 1e-3; dy = 1e-3; d2 = dx * dx + dy * dy; }
+        const d = Math.sqrt(d2), minD = a.r + b.r;
+        let f = kRep / d2;
+        if (d < minD) f += 0.6 * (minD - d) / d;       // soft collision
+        const fx = f * dx / d, fy = f * dy / d;
+        a.fx -= fx; a.fy -= fy; b.fx += fx; b.fy += fy;
       }
     }
 
-    // optional C2 symmetrisation across metal -> backbone-centroid axis
-    if (enforceSym) symmetrise(0.12);
+    if (enforceSym) symmetrise(0.15);
 
-    // gentle centring
-    let cx = 0, cy = 0; nodes.forEach(n => { cx += n.ref.x; cy += n.ref.y; });
-    cx /= nodes.length; cy /= nodes.length;
-    nodes.forEach(n => { n.fx -= 0.002 * (n.ref.x - cx); n.fy -= 0.002 * (n.ref.y - cy); });
-
-    // integrate (semi-implicit, damped)
-    const damp = 0.86, maxV = 0.6 * L0;
+    // integrate the soft forces (damped, clamped, 2D)
+    const damp = 0.82, maxV = 0.4 * L0;
     nodes.forEach(n => {
       const p = n.ref;
       if (p.pinned) { p.vx = p.vy = 0; return; }
-      p.vx = (p.vx + n.fx * dt) * damp;
-      p.vy = (p.vy + n.fy * dt) * damp;
+      p.vx = (p.vx + n.fx * dt) * damp; p.vy = (p.vy + n.fy * dt) * damp;
       const v = Math.hypot(p.vx, p.vy);
       if (v > maxV) { p.vx *= maxV / v; p.vy *= maxV / v; }
       p.x += p.vx * dt; p.y += p.vy * dt;
     });
+
+    // hard pass: project bond + ring distance constraints (Gauss-Seidel).
+    // Bonds last each pass so uniform bond length wins any residual conflict.
+    for (let pass = 0; pass < 18; pass++) {
+      for (const c of view.hard) {
+        const A = c.a.ref, B = c.b.ref;
+        let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
+        const diff = (d - c.d) / d;
+        const pa = A.pinned, pb = B.pinned;
+        if (pa && pb) continue;
+        const sa = pa ? 0 : (pb ? 1 : 0.5), sb = pb ? 0 : (pa ? 1 : 0.5);
+        A.x += sa * diff * dx; A.y += sa * diff * dy;
+        B.x -= sb * diff * dx; B.y -= sb * diff * dy;
+      }
+    }
+
+    // drift-free recentring (translation only; skipped while the user drags)
+    if (!nodes.some(n => n.ref.pinned)) {
+      let cx = 0, cy = 0; nodes.forEach(n => { cx += n.ref.x; cy += n.ref.y; });
+      cx = cx / nodes.length - view.centroid0.x; cy = cy / nodes.length - view.centroid0.y;
+      nodes.forEach(n => { n.ref.x -= cx; n.ref.y -= cy; });
+    }
   }
 
   function backboneCentroid() {
@@ -239,7 +266,13 @@
     });
   }
 
-  function relax(n) { for (let i = 0; i < n; i++) step(1.0); }
+  function relax(n, anneal = false) {
+    for (let i = 0; i < n; i++) {
+      relaxBoost = anneal ? (i < n * 0.4 ? 3.0 : 1.0) : 1.0;
+      step(1.0);
+    }
+    relaxBoost = 1.0;
+  }
 
   // ---------------------------------------------------------------- view xform
   let scale = 40, tx = 0, ty = 0;
@@ -386,14 +419,19 @@
     if (LABEL_ELEMENTS.has(n.el) || n.id === hydrideId) return 10;
     return 1.5;
   }
+  // charge as drawn line shapes (never a font glyph), geometrically centred in
+  // the badge circle: a minus is one centred segment, a plus adds a centred
+  // vertical segment -- both symmetric about (cx, cy).
   function drawCharge(g, X, Y, r, q) {
-    const cx = X + r * 0.9 + 6, cy = Y - r * 0.9 - 4;
-    el("circle", { cx, cy, r: 7.5, fill: "#fff", stroke: q > 0 ? "#c0392b" : "#2b5fcc", "stroke-width": 1.4 }, g);
-    const sign = q > 0 ? "+" : "−";
-    const txt = Math.abs(q) > 1 ? Math.abs(q) + sign : sign;
-    const t = el("text", { x: cx, y: cy + 0.5, "text-anchor": "middle", "dominant-baseline": "central",
-      "font-size": 11, "font-weight": 800, fill: q > 0 ? "#c0392b" : "#2b5fcc" }, g);
-    t.textContent = txt;
+    const cx = X + r * 0.9 + 7, cy = Y - r * 0.9 - 5;
+    const col = q > 0 ? "#c0392b" : "#2b5fcc";
+    el("circle", { cx, cy, r: 7.6, fill: "#fff", stroke: col, "stroke-width": 1.4, class: "glyph" }, g);
+    const a = 4.0;
+    el("line", { x1: cx - a, y1: cy, x2: cx + a, y2: cy, stroke: col,
+      "stroke-width": 1.9, "stroke-linecap": "round", class: "glyph" }, g);
+    if (q > 0)
+      el("line", { x1: cx, y1: cy - a, x2: cx, y2: cy + a, stroke: col,
+        "stroke-width": 1.9, "stroke-linecap": "round", class: "glyph" }, g);
   }
 
   // ---------------------------------------------------------------- legend
@@ -406,7 +444,7 @@
       `<b>${M.meta.name}</b><br>` +
       `metal: <b>Cu</b> · CN ${M.metal.cn} · ${M.metal.geometry_name}<br>` +
       `T-REX: <span style="font-family:monospace">${trexStr.slice(0, 40)}${trexStr.length > 40 ? "…" : ""}</span><br>` +
-      `chiral: ${t.is_chiral_overall ? "yes — axial backbone" : "—"}` +
+      `config: ${M.cip && M.cip.descriptor ? `<b>${M.cip.label}</b> axial · ${M.cip.helicity}-helical` : "—"}` +
       `<br><span class="swatch" style="background:${COLORS.P}"></span>P` +
       `<span class="swatch" style="background:${COLORS.O};margin-left:8px"></span>O` +
       `<span class="swatch" style="background:${COLORS.Cu};margin-left:8px"></span>Cu`;
@@ -480,7 +518,7 @@
       document.querySelectorAll("[data-level]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       LEVEL = btn.getAttribute("data-level");
-      buildView(); relax(60); fit(); render();
+      buildView(); relax(240, true); fit(); render();
     });
   });
   const playBtn = document.getElementById("btn-play");
@@ -489,7 +527,7 @@
     playBtn.textContent = running ? "▶ run" : "❚❚ paused";
     if (!running) render();
   });
-  document.getElementById("btn-relax").addEventListener("click", () => { relax(300); render(); });
+  document.getElementById("btn-relax").addEventListener("click", () => { relax(300, true); render(); });
   document.getElementById("chk-sym").addEventListener("change", e => { enforceSym = e.target.checked; });
   document.getElementById("chk-wedge").addEventListener("change", e => { showWedge = e.target.checked; render(); });
   document.getElementById("chk-charge").addEventListener("change", e => { showCharge = e.target.checked; render(); });
@@ -499,7 +537,7 @@
   document.getElementById("btn-reset").addEventListener("click", () => {
     M.atoms.forEach(a => { const p = atom.get(a.id); p.x = a.x; p.y = a.y; p.vx = p.vy = 0; p.pinned = false; });
     sup.forEach(s => s.pinned = false);
-    buildView(); relax(120); fit(); render();   // relax like the initial load
+    buildView(); relax(240, true); fit(); render();   // relax like the initial load
   });
   document.getElementById("btn-svg").addEventListener("click", () => {
     const w = W(), h = H();
@@ -521,17 +559,73 @@
   window.addEventListener("resize", () => { fit(); render(); });
 
   // ---------------------------------------------------------------- go
-  buildView(); relax(120); fit(); legend(); render();
+  buildView(); relax(280, true); fit(); legend(); render();
   requestAnimationFrame(frame);
 
   // expose for headless testing / screenshots
   window.__metaldepict = {
-    relax: (n) => { relax(n || 200); render(); },
-    setLevel: (lv) => { LEVEL = lv; buildView(); relax(120); fit(); render(); },
-    overlapScore, view: () => view, stop: () => { running = false; }
+    relax: (n) => { relax(n || 200, true); render(); },
+    setLevel: (lv) => { LEVEL = lv; buildView(); relax(240, true); fit(); render(); },
+    fit: () => { fit(); render(); },
+    overlapScore, metrics, view: () => view, stop: () => { running = false; }
   };
 
-  // crude overlap metric: count node-pairs whose circles intersect (non-bonded)
+  // quantitative depiction-quality metrics (consistency of bonds/angles/rings)
+  function metrics() {
+    const v = view, avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+    const cvOf = a => { const m = avg(a); return m ? Math.sqrt(avg(a.map(x => (x - m) ** 2))) / m : 0; };
+    // uniformity is measured over the standard organic bonds; metal/dative
+    // bonds are a separate (legitimately longer) class and abbreviation bonds
+    // are not real bonds.
+    const bl = v.edges.filter(e => !["super", "dative", "metalH"].includes(e.type))
+      .map(e => Math.hypot(e.na.ref.x - e.nb.ref.x, e.na.ref.y - e.nb.ref.y));
+    const ringEdgeCV = [], ringAngleDev = [];
+    (M.rings || []).forEach(ring => {
+      const ns = ring.map(id => v.nodeByKey.get("a:" + id));
+      if (ns.some(x => !x)) return;
+      const n = ns.length, e = [];
+      for (let i = 0; i < n; i++) {
+        const A = ns[i].ref, B = ns[(i + 1) % n].ref; e.push(Math.hypot(A.x - B.x, A.y - B.y));
+      }
+      ringEdgeCV.push(cvOf(e));
+      const ideal = (n - 2) * 180 / n;
+      for (let i = 0; i < n; i++) {
+        const P = ns[(i - 1 + n) % n].ref, Q = ns[i].ref, R = ns[(i + 1) % n].ref;
+        let ang = Math.abs((Math.atan2(P.y - Q.y, P.x - Q.x) - Math.atan2(R.y - Q.y, R.x - Q.x)) * 180 / Math.PI);
+        if (ang > 180) ang = 360 - ang;
+        ringAngleDev.push(Math.abs(ang - ideal));
+      }
+    });
+    // C2 symmetry deviation: reflect each mirror atom across the
+    // metal->backbone-centroid axis and measure residual to its partner (/ L0)
+    let symDev = 0, sn = 0;
+    const Mt = atom.get(metalId), bc = backboneCentroid();
+    let axx = bc.x - Mt.x, axy = bc.y - Mt.y; const al = Math.hypot(axx, axy) || 1; axx /= al; axy /= al;
+    const reflect = P => { const vx = P.x - Mt.x, vy = P.y - Mt.y, dot = vx * axx + vy * axy;
+      const px = dot * axx, py = dot * axy; return { x: Mt.x + px - (vx - px), y: Mt.y + py - (vy - py) }; };
+    (M.symmetry.mirror_pairs || []).forEach(([i, j]) => {
+      const ni = v.nodeByKey.get("a:" + i), nj = v.nodeByKey.get("a:" + j);
+      if (!ni || !nj) return;
+      const r = reflect(nj.ref);
+      symDev += Math.hypot(ni.ref.x - r.x, ni.ref.y - r.y); sn++;
+    });
+    return {
+      bondLenCV: +cvOf(bl).toFixed(3),
+      ringEdgeCV: +avg(ringEdgeCV).toFixed(3),
+      ringAngleDevDeg: +avg(ringAngleDev).toFixed(2),
+      symDev: +(sn ? symDev / sn / L0 : 0).toFixed(3),
+      overlap: overlapScore(),
+    };
+  }
+
+  // overlap metric: count non-bonded node pairs whose *visual* glyphs intersect
+  // (use the drawn label size, not the larger repulsion radius)
+  function visualR(n) {
+    if (n.kind === "super") return 0.45 * L0;        // abbreviation box ~ label
+    if (n.el === "Cu") return 0.34 * L0;
+    if (LABEL_ELEMENTS.has(n.el) || n.id === hydrideId) return 0.30 * L0;
+    return 0.16 * L0;                                 // bare vertex
+  }
   function overlapScore() {
     let c = 0; const ns = view.nodes;
     for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) {
@@ -539,7 +633,7 @@
       const key = a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key;
       if (view.excl.has(key)) continue;
       const d = Math.hypot(a.ref.x - b.ref.x, a.ref.y - b.ref.y);
-      if (d < (a.r + b.r) * 0.85) c++;
+      if (d < (visualR(a) + visualR(b))) c++;
     }
     return c;
   }

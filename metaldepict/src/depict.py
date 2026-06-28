@@ -90,6 +90,79 @@ def _bond_type(b: Chem.Bond) -> tuple[str, float]:
     return "single", 1.0
 
 
+def _ordered_rings(mol: Chem.Mol) -> list[list[int]]:
+    """SSSR rings with atoms in cyclic (bond-walk) order -- needed so the viewer
+    can constrain each ring to a regular polygon."""
+    ri = mol.GetRingInfo()
+    out = []
+    for ring in ri.AtomRings():
+        ring = list(ring)
+        rset = set(ring)
+        adj = {a: [n.GetIdx() for n in mol.GetAtomWithIdx(a).GetNeighbors()
+                   if n.GetIdx() in rset] for a in ring}
+        order, prev, cur = [ring[0]], None, ring[0]
+        while len(order) < len(ring):
+            nxt = next((x for x in adj[cur] if x != prev and x not in order), None)
+            if nxt is None:
+                break
+            order.append(nxt); prev, cur = cur, nxt
+        out.append(order)
+    return out
+
+
+def _atom_angle_deg(atom: Chem.Atom) -> float:
+    """Ideal bond angle at this atom (used for 1-3 angle constraints)."""
+    if atom.GetSymbol() == "Cu":
+        return 120.0                       # trigonal metal
+    hyb = atom.GetHybridization()
+    if hyb == Chem.HybridizationType.SP3:
+        return 109.5
+    if hyb == Chem.HybridizationType.SP:
+        return 180.0
+    return 120.0                           # sp2 / aromatic
+
+
+def _axial_cip(mol: Chem.Mol, biaryl) -> dict | None:
+    """
+    Assign the axial (atropisomeric) CIP descriptor of the biaryl from the 3D
+    conformer.  RDKit does not perceive this atropisomer, so we do it directly:
+    on each pivot aryl carbon the two ortho positions are the P-bearing carbon
+    and the dioxole-O-bearing carbon; P (Z=15) outranks O (Z=8), so the
+    P-bearing ortho is the higher-CIP substituent.  The sign of the torsion
+    (highOrtho_a - axis_a - axis_b - highOrtho_b) gives aR (+) / aS (-) and the
+    helicity P (+) / M (-).
+    """
+    if not biaryl or mol.GetNumConformers() == 0:
+        return None
+    from rdkit.Chem import rdMolTransforms
+    a, b = biaryl
+    conf = mol.GetConformer()
+
+    def high_ortho(idx, other):
+        cands = [n.GetIdx() for n in mol.GetAtomWithIdx(idx).GetNeighbors()
+                 if n.GetIsAromatic() and n.GetIdx() != other]
+        for c in cands:                    # prefer the P-bearing ortho
+            if any(nn.GetSymbol() == "P" for nn in mol.GetAtomWithIdx(c).GetNeighbors()):
+                return c
+        return cands[0] if cands else None
+
+    ha, hb = high_ortho(a, b), high_ortho(b, a)
+    if ha is None or hb is None:
+        return None
+    tor = rdMolTransforms.GetDihedralDeg(conf, ha, a, b, hb)
+    descriptor = "aR" if tor > 0 else "aS"
+    helicity = "P" if tor > 0 else "M"
+    # wedge the two pivot->highOrtho bonds to show the twist (front/back)
+    wedge = {(a, ha): ("up" if tor > 0 else "down"),
+             (b, hb): ("down" if tor > 0 else "up")}
+    return {"axis": [a, b], "high_ortho": [ha, hb],
+            "priority_torsion_deg": round(float(tor), 1),
+            "descriptor": descriptor, "helicity": helicity,
+            "label": f"({descriptor})",
+            "wedge_bonds": {f"{k[0]}-{k[1]}": v for k, v in wedge.items()},
+            "_wedge": wedge}
+
+
 def _phenyl_groups(mol: Chem.Mol, metal: int) -> list[dict]:
     """
     Level-2 abbreviation: each P-bound DTBM aryl (ring + its tBu/OMe trees)
@@ -261,24 +334,31 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
             "nH": a.GetTotalNumHs(),
             "sym_class": ranks[i],
             "role": role,
+            "angle_deg": _atom_angle_deg(a),
             "group_l1": group_l1.get(i),
             "group_l2": group_l2.get(i),
         })
 
+    # ---- CIP (axial) ----
+    cip = _axial_cip(mol, biaryl)
+    cip_wedge = (cip or {}).get("_wedge", {})
+
     # ---- bonds ----
-    stereo_bonds = _stereo_bond_set(mol, metal, hydride, donors, biaryl)
+    # Wedges depict the one real stereochemical element here: the biaryl axis.
+    # (RDKit perceives no tetrahedral/atropisomeric stereocentre, and the metal
+    # is not configurationally defined, so we do not invent wedges elsewhere.)
     bonds = []
     for b in mol.GetBonds():
         ai, bi = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
         btype, order = _bond_type(b)
-        wedge = "none"
-        if (ai, bi) in stereo_bonds or (bi, ai) in stereo_bonds:
-            dz = depth[bi] - depth[ai]
-            if abs(dz) > 0.04:
-                wedge = "up" if dz > 0 else "down"
+        wedge, a0 = "none", ai
+        if (ai, bi) in cip_wedge:
+            wedge = cip_wedge[(ai, bi)]
+        elif (bi, ai) in cip_wedge:
+            wedge, a0 = cip_wedge[(bi, ai)], bi
         bonds.append({
-            "a": ai, "b": bi, "order": order, "type": btype,
-            "wedge": wedge, "dz": round(float(depth[bi] - depth[ai]), 3),
+            "a": ai, "b": bi, "a0": a0, "order": order, "type": btype,
+            "wedge": wedge,
         })
 
     return {
@@ -296,7 +376,9 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
         "metal": _metal_block(metal, donors, hydride, trex_desc),
         "atoms": atoms,
         "bonds": bonds,
+        "rings": _ordered_rings(mol),
         "groups": groups,
+        "cip": {k: v for k, v in (cip or {}).items() if k != "_wedge"},
         "symmetry": {
             "classes": sym_classes,
             "mirror_pairs": mirror_pairs,

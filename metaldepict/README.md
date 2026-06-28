@@ -87,25 +87,45 @@ loads `viewer/molecule_data.js` (`window.MOLECULE`).
 
 ---
 
-## The 2D physics engine
+## The 2D layout engine (constraint-based, with a little relaxation)
 
-A small force simulation (in `viewer.js`) relaxes the layout while keeping
-standardised geometry:
+`viewer.js` uses **Position-Based Dynamics**, strictly in the plane, so the
+geometry stays publication-clean while fragments still relax apart:
 
-* **1–2 bond springs** pull every bond to a standardised rest length
-  (aromatic/single, P→Cu dative longer, Cu–H shorter).
-* **1–3 angle springs** hold standardised bond *angles* — preserved from the
-  clean CoordGen layout for the organic framework, and forced to an ideal **120°**
-  at the trigonal metal centre.
-* **Fragment repulsion + hard collision** between non-bonded nodes (with large
-  collision radii on abbreviation superatoms) — this is what spreads the four
-  bulky aryls apart and **reduces overlap**.
+* **Hard constraints** — every bond is projected to *one standard length*, and
+  every ring to a *regular polygon* (all intra-ring distances fixed to the
+  regular n-gon chords). So hexagons are hexagons and pentagons are pentagons,
+  and bond lengths are uniform. The trigonal metal's **120°** angles are hard
+  too, giving a clean coordination centre. M–P dative bonds are the one
+  deliberately-longer class (a normal drawing convention).
+* **Soft constraints** — 1–3 bond angles are springs (ideal 109.5°/120° from
+  hybridisation) that *flex a little* so the structure can de-overlap; acyclic
+  torsions are free, which is the in-plane freedom fragments use to swing apart.
+* **Annealed repulsion** — non-bonded fragments (and bulky abbreviation
+  superatoms) repel, strong early then easing, to untangle overlaps. This is the
+  "little relaxation" — enough to avoid clashes, not enough to distort anything.
 * **Optional C₂ symmetrisation** reflects mirror-paired atoms across the
-  Cu–backbone axis so equivalent groups are placed symmetrically.
+  Cu–backbone axis (on by default).
+
+**Stereochemistry & charges:** the axial (atropisomeric) **CIP** descriptor is
+computed from the 3D conformer (P-bearing ortho outranks O-bearing → sign of the
+priority torsion gives aR/aS and M/P helicity) and drawn with a wedge/hash on the
+axis. Formal charges are drawn as **geometric +/− line shapes centred in a
+badge** (never a font glyph) — e.g. Cu⁺ / H⁻.
 
 Everything is **adjustable**: drag any atom or group (it pins where you drop it),
 double-click to pin/unpin, scroll to zoom, drag the background to pan, and the
 `spread` slider tunes repulsion. Export the current layout as **SVG** or **JSON**.
+
+## Adversarial image review (`review/`)
+
+`review/` is an agent-in-the-loop quality harness: it renders the depiction
+headless, computes objective metrics (bond-length CV, ring regularity, C₂
+deviation, overlap), has a vision model score the screenshot against published
+conventions found by web search, blends them into a 0–100 rating with a
+percentile band, and iterates the depiction until the score plateaus. See
+[`review/REVIEW.md`](review/REVIEW.md) for the full process and the run log
+(this build: l2 ≈ 83 / "top ~15%", up from the original "bottom 5%").
 
 ---
 
