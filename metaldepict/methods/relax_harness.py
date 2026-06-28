@@ -291,10 +291,75 @@ class Harness:
         return {
             "bondCV": round(bondCV, 4),
             "ringEdgeCV": round(ringCV, 4),
+            "ringAngleDev": round(self._ring_angle_dev(), 2),
             "angleDevDeg": round(angleDev, 2),
             "overlap": ov,
             "coordLenErr": round(sum(coorderr) / len(coorderr), 3) if coorderr else 0,
+            "symDev": round(self._sym_dev(), 3),
         }
+
+    def _ring_cycle(self, r):
+        """Order a ring's atom set into a cyclic walk via ring-internal adjacency."""
+        rs = set(r)
+        start = next(iter(rs))
+        cyc = [start]
+        prev = None
+        cur = start
+        while True:
+            nxt = None
+            for nb in self.adj[cur]:
+                if nb in rs and nb != prev:
+                    if nb == start and len(cyc) > 2:
+                        return cyc
+                    if nb not in cyc:
+                        nxt = nb
+                        break
+            if nxt is None:
+                return cyc
+            cyc.append(nxt)
+            prev, cur = cur, nxt
+            if len(cyc) > len(rs):
+                return cyc
+
+    def _ring_angle_dev(self):
+        """Mean |interior-angle - regular-polygon-ideal| over all ring vertices.
+        Penalises squished / irregular rings (the references are regular n-gons)."""
+        devs = []
+        for r in self.rings:
+            cyc = self._ring_cycle(r)
+            n = len(cyc)
+            if n < 3:
+                continue
+            ideal = 180.0 * (n - 2) / n
+            for t in range(n):
+                p = self.pos[cyc[t - 1]]
+                q = self.pos[cyc[t]]
+                s = self.pos[cyc[(t + 1) % n]]
+                devs.append(abs(_ang(p, q, s) - ideal))
+        return sum(devs) / len(devs) if devs else 0.0
+
+    def _sym_dev(self):
+        """C2 deviation: reflect every atom across the horizontal Cu-H axis and
+        measure the mean residual to the nearest same-label atom (the references
+        are C2-symmetric about that axis).  Normalised by L."""
+        if self.metal is None:
+            return 0.0
+        cy = self.pos[self.metal][1]
+        tot = 0.0
+        n = 0
+        for i in self.ids:
+            x, y = self.pos[i]
+            rx, ry = x, 2 * cy - y
+            best = 1e9
+            for j in self.ids:
+                if self.label[j] != self.label[i]:
+                    continue
+                d = math.hypot(self.pos[j][0] - rx, self.pos[j][1] - ry)
+                if d < best:
+                    best = d
+            tot += best
+            n += 1
+        return (tot / n) / L if n else 0.0
 
     # ----------------------------------------------------------------- output --
     def commit(self):
@@ -332,6 +397,88 @@ def _cv(xs):
         return 0.0
     var = sum((x - m) ** 2 for x in xs) / len(xs)
     return math.sqrt(var) / m
+
+
+# ============================================================================ #
+#  NUMERICAL JUDGE  +  BLACK-BOX OPTIMISER
+#  quality_loss() turns a relaxed depiction into ONE scalar (lower = better,
+#  reference-like). optimize_method() runs scipy differential-evolution over a
+#  method's OWN parameters to minimise the mean loss across all four ligands.
+# ============================================================================ #
+# Coefficients that DEFINE "good" (reference-like) -- uniform bonds, regular
+# rings, correct coordination lengths, no overlap, C2-symmetric. Junction angles
+# are intentionally NOT scored (the bite angle etc. are set by the layout, not a
+# single ideal). These are the judge's weights, fixed; the METHODS tune their own.
+DEFAULT_JUDGE = {
+    "bond": 9.0,        # bondCV  -- uniform skeletal bond lengths (top priority)
+    "ring": 7.0,        # ringEdgeCV
+    "ringang": 0.05,    # ringAngleDev (deg) -- regular polygons
+    "coord": 1.6,       # coordLenErr -- P-Cu / Cu-H at target length
+    "overlap": 1.0,     # per overlapping non-bonded pair (count) -- hard penalty
+    "sym": 1.2,         # symDev -- C2 symmetry about the Cu-H axis
+}
+
+
+def quality_loss(H, c=DEFAULT_JUDGE):
+    """Scalar numerical quality of a (relaxed) Harness -- lower is better."""
+    m = H.metrics()
+    return (c["bond"] * m["bondCV"]
+            + c["ring"] * m["ringEdgeCV"]
+            + c["ringang"] * m["ringAngleDev"]
+            + c["coord"] * m["coordLenErr"]
+            + c["overlap"] * m["overlap"]
+            + c["sym"] * m["symDev"])
+
+
+def mean_loss(relax_fn, params, ligands=LIGANDS, judge=DEFAULT_JUDGE):
+    """Mean quality_loss of relax_fn(params) across the ligand set (the optimiser
+    target). Returns a large penalty if the relaxer raises."""
+    tot = 0.0
+    for key in ligands:
+        H = Harness(key)
+        try:
+            relax_fn(H, params)
+        except Exception:
+            return 1e6
+        tot += quality_loss(H, judge)
+    return tot / len(ligands)
+
+
+def optimize_method(relax_fn, bounds, param_names, ligands=LIGANDS,
+                    judge=DEFAULT_JUDGE, optimizer="de", maxiter=25, seed=0):
+    """Black-box optimise a method's parameters against the numerical judge.
+
+    `relax_fn(H, params)` takes a dict {name: value}; `bounds` is a list of
+    (lo, hi) aligned with `param_names`. Returns (best_params_dict, best_loss,
+    per_ligand_metrics). optimizer: 'de' (differential evolution, global),
+    'anneal' (dual annealing), or 'nm' (Nelder-Mead, local)."""
+    from scipy.optimize import differential_evolution, dual_annealing, minimize
+
+    def obj(x):
+        return mean_loss(relax_fn, dict(zip(param_names, x)), ligands, judge)
+
+    if optimizer == "de":
+        res = differential_evolution(obj, bounds, maxiter=maxiter, seed=seed,
+                                     tol=1e-4, popsize=10, polish=True,
+                                     mutation=(0.4, 1.0), recombination=0.8)
+        best, loss = res.x, res.fun
+    elif optimizer == "anneal":
+        res = dual_annealing(obj, bounds, maxiter=maxiter, seed=seed)
+        best, loss = res.x, res.fun
+    else:
+        x0 = [(lo + hi) / 2 for lo, hi in bounds]
+        res = minimize(obj, x0, method="Nelder-Mead",
+                       options={"maxiter": maxiter * 10 * len(bounds),
+                                "xatol": 1e-3, "fatol": 1e-4})
+        best, loss = res.x, res.fun
+
+    params = dict(zip(param_names, [float(v) for v in best]))
+    per = {}
+    for key in ligands:
+        H = Harness(key)
+        relax_fn(H, params)
+        per[key] = H.metrics()
+    return params, float(loss), per
 
 
 # ============================================================================ #
