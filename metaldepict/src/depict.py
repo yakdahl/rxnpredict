@@ -239,24 +239,24 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
     hydride = info["hydride"]
     donors = set(info["donors"])
 
-    # ---- 2D layout: ligand via CoordGen, metal/hydride placed geometrically ----
-    lig_n = metal                       # ligand atoms are 0..metal-1 (Cu appended)
-    lig = Chem.RWMol(mol)
-    for idx in sorted([hydride, metal], reverse=True):
-        lig.RemoveAtom(idx)
-    coords = _ligand_2d(lig.GetMol())   # indices 0..lig_n-1 align with mol
+    # ---- 2D layout: CoordGen on the FULL complex, so the P-Cu-P + biaryl
+    # chelate is laid out as a real 7-membered ring.  This reproduces the
+    # conventional published bisphosphine depiction (the biaryl backbone stacked
+    # on one side, both phosphines pointing in to the metal, the aryls fanning
+    # out) -- which laying out the ligand alone and bolting on the metal cannot. ----
+    cg = Chem.Mol(mol)
+    cg.RemoveAllConformers()
+    try:
+        rdCoordGen.AddCoords(cg)
+    except Exception:
+        from rdkit.Chem import AllChem
+        AllChem.Compute2DCoords(cg)
+    conf2d = cg.GetConformer()
+    coords = {i: (float(conf2d.GetAtomPosition(i).x), float(conf2d.GetAtomPosition(i).y))
+              for i in range(cg.GetNumAtoms())}
     P = list(donors)
-    pm = np.array([coords[P[0]], coords[P[1]]]).mean(axis=0)
-    backbone_centroid = np.array([coords[i] for i in range(lig_n)]).mean(axis=0)
-    out_dir = pm - backbone_centroid
-    if np.linalg.norm(out_dir) < 1e-6:
-        out_dir = np.array([0.0, 1.0])
-    out_dir = out_dir / np.linalg.norm(out_dir)
-    bond_len = 1.5
-    cu_xy = pm + out_dir * bond_len * 1.4
-    h_xy = cu_xy + out_dir * bond_len
-    coords[metal] = tuple(cu_xy)
-    coords[hydride] = tuple(h_xy)
+    backbone_centroid = np.array([coords[i] for i in range(metal)]).mean(axis=0)
+    cu_xy = np.array(coords[metal])
 
     depth = _pca_depth(mol)
 
@@ -341,24 +341,20 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
 
     # ---- CIP (axial) ----
     cip = _axial_cip(mol, biaryl)
-    cip_wedge = (cip or {}).get("_wedge", {})
+    biaryl_set = set(biaryl) if biaryl else set()
 
     # ---- bonds ----
-    # Wedges depict the one real stereochemical element here: the biaryl axis.
-    # (RDKit perceives no tetrahedral/atropisomeric stereocentre, and the metal
-    # is not configurationally defined, so we do not invent wedges elsewhere.)
+    # The one real stereo element is the biaryl axis; published bisphosphine
+    # drawings denote it by drawing the central biaryl bond BOLD, so we flag it
+    # as `axis` rather than inventing wedges on the flanking bonds.
     bonds = []
     for b in mol.GetBonds():
         ai, bi = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
         btype, order = _bond_type(b)
-        wedge, a0 = "none", ai
-        if (ai, bi) in cip_wedge:
-            wedge = cip_wedge[(ai, bi)]
-        elif (bi, ai) in cip_wedge:
-            wedge, a0 = cip_wedge[(bi, ai)], bi
+        is_axis = bool(biaryl) and {ai, bi} == biaryl_set
         bonds.append({
-            "a": ai, "b": bi, "a0": a0, "order": order, "type": btype,
-            "wedge": wedge,
+            "a": ai, "b": bi, "a0": ai, "order": order, "type": btype,
+            "wedge": "none", "axis": is_axis,
         })
 
     return {

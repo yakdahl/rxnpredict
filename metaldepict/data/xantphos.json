@@ -1,0 +1,1467 @@
+{
+  "meta": {
+    "name": "(Xantphos)Cu-H",
+    "formula": "C39H33CuOP2",
+    "smiles": "CC1(C)c2cccc(P(c3ccccc3)c3ccccc3)c2Oc2c(P(c3ccccc3)c3ccccc3)cccc21",
+    "conformer_method": "rdkit-etkdg",
+    "trex": {
+      "source": "trex",
+      "metal": "Cu",
+      "ox": 0,
+      "spin": null,
+      "geometry": "unk",
+      "geometry_name": "unknown",
+      "cn": 1,
+      "ligands": [
+        {
+          "kind": "SMILES",
+          "text": "CC1(C)c2cccc(P(c3ccccc3)c3ccccc3)c2Oc2c(P(c3ccccc3)c3ccccc3)cccc21"
+        }
+      ],
+      "n_pairs": 0,
+      "n_singles": 1,
+      "trex_string": "Cu{0} | L=[ SMILES:CC1(C)c2cccc(P(c3ccccc3)c3ccccc3)c2Oc2c(P(c3ccccc3)c3ccccc3)cccc21 ] | MAP:{ 1:[25,26,27,33] }",
+      "is_chiral": false,
+      "chirality": null,
+      "delta_lambda": null,
+      "canonical": {
+        "available": true,
+        "canonicalised": true,
+        "string": "Cu{+1,S=1} | L=[ SMILES:CC1(C)c2cccc(P(c3ccccc3)c3ccccc3)c2Oc2c(P(c3ccccc3)c3ccccc3)cccc21, SMILES:[H-] ] | MAP:{ 1:9, 1:26, 2:1 }",
+        "cn": 3,
+        "geometry": "trpl"
+      },
+      "is_chiral_overall": false
+    },
+    "ideal_bond": {
+      "aromatic": 1.39,
+      "single": 1.5,
+      "double": 1.34,
+      "C-O": 1.43,
+      "C-P": 1.83,
+      "P-metal": 2.25,
+      "H-metal": 1.5
+    },
+    "n_atoms": 44,
+    "description": "(DTBM-SEGPhos)Cu-H : bidentate phosphine chelate, trigonal Cu(I) hydride"
+  },
+  "metal": {
+    "id": 42,
+    "el": "Cu",
+    "cn": 3,
+    "donors": [
+      8,
+      25
+    ],
+    "hydride": 43,
+    "geometry": "trpl",
+    "geometry_name": "trigonal planar",
+    "trex_perceived_geometry": "unknown",
+    "trex_perceived_cn": 1
+  },
+  "atoms": [
+    {
+      "id": 0,
+      "el": "C",
+      "x": 1.7448,
+      "y": 3.6304,
+      "z": 0.126,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 3,
+      "sym_class": 1,
+      "role": "backbone",
+      "angle_deg": 109.5,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 1,
+      "el": "C",
+      "x": 0.8686,
+      "y": 3.0876,
+      "z": -0.1153,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 41,
+      "role": "backbone",
+      "angle_deg": 109.5,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 2,
+      "el": "C",
+      "x": 0.4492,
+      "y": 4.03,
+      "z": -0.4501,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 3,
+      "sym_class": 1,
+      "role": "backbone",
+      "angle_deg": 109.5,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 3,
+      "el": "C",
+      "x": -0.2674,
+      "y": 2.7426,
+      "z": -0.1048,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 34,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 4,
+      "el": "C",
+      "x": -1.148,
+      "y": 3.228,
+      "z": -0.1637,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 25,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 5,
+      "el": "C",
+      "x": -2.0008,
+      "y": 2.6888,
+      "z": -0.15,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 15,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 6,
+      "el": "C",
+      "x": -1.9442,
+      "y": 1.6852,
+      "z": -0.0837,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 27,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 7,
+      "el": "C",
+      "x": -1.0372,
+      "y": 1.2558,
+      "z": -0.033,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 36,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 8,
+      "el": "P",
+      "x": -1.0472,
+      "y": 0.2198,
+      "z": 0.0418,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 42,
+      "role": "donor",
+      "angle_deg": 109.5,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 9,
+      "el": "C",
+      "x": -2.1178,
+      "y": 0.2968,
+      "z": -0.2511,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 30,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 10,
+      "el": "C",
+      "x": -2.7072,
+      "y": -0.5098,
+      "z": -0.5627,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 11,
+      "el": "C",
+      "x": -3.699,
+      "y": -0.3988,
+      "z": -0.7949,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 12,
+      "el": "C",
+      "x": -4.101,
+      "y": 0.514,
+      "z": -0.7182,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 3,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 13,
+      "el": "C",
+      "x": -3.5088,
+      "y": 1.3164,
+      "z": -0.4098,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 14,
+      "el": "C",
+      "x": -2.5174,
+      "y": 1.2088,
+      "z": -0.177,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g1_ph",
+      "group_l2": null
+    },
+    {
+      "id": 15,
+      "el": "C",
+      "x": -1.6358,
+      "y": -1.1822,
+      "z": 0.4174,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 30,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 16,
+      "el": "C",
+      "x": -1.0538,
+      "y": -1.9906,
+      "z": 0.6221,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 17,
+      "el": "C",
+      "x": -1.4624,
+      "y": -2.9074,
+      "z": 0.9104,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 18,
+      "el": "C",
+      "x": -2.4584,
+      "y": -3.008,
+      "z": 1.0,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 3,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 19,
+      "el": "C",
+      "x": -3.044,
+      "y": -2.195,
+      "z": 0.8028,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 20,
+      "el": "C",
+      "x": -2.6332,
+      "y": -1.2812,
+      "z": 0.5145,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g2_ph",
+      "group_l2": null
+    },
+    {
+      "id": 21,
+      "el": "C",
+      "x": -0.264,
+      "y": 1.821,
+      "z": -0.038,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 38,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 22,
+      "el": "O",
+      "x": 0.43,
+      "y": 1.6532,
+      "z": 0.0269,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 29,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 23,
+      "el": "C",
+      "x": 1.0992,
+      "y": 1.4042,
+      "z": 0.0325,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 38,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 24,
+      "el": "C",
+      "x": 1.4242,
+      "y": 0.5048,
+      "z": 0.1094,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 36,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 25,
+      "el": "P",
+      "x": 0.8576,
+      "y": -0.357,
+      "z": 0.2284,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 42,
+      "role": "donor",
+      "angle_deg": 109.5,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 26,
+      "el": "C",
+      "x": 0.7354,
+      "y": -1.3984,
+      "z": 0.1384,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 30,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 27,
+      "el": "C",
+      "x": 1.5084,
+      "y": -2.0216,
+      "z": -0.1461,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 28,
+      "el": "C",
+      "x": 1.3588,
+      "y": -3.006,
+      "z": -0.2063,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 29,
+      "el": "C",
+      "x": 0.4324,
+      "y": -3.3662,
+      "z": 0.0154,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 3,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 30,
+      "el": "C",
+      "x": -0.3426,
+      "y": -2.7464,
+      "z": 0.2978,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 31,
+      "el": "C",
+      "x": -0.189,
+      "y": -1.7624,
+      "z": 0.3587,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g3_ph",
+      "group_l2": null
+    },
+    {
+      "id": 32,
+      "el": "C",
+      "x": 2.2338,
+      "y": -0.9754,
+      "z": -0.1182,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 30,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 33,
+      "el": "C",
+      "x": 3.0552,
+      "y": -0.4058,
+      "z": -0.4192,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 34,
+      "el": "C",
+      "x": 3.9586,
+      "y": -0.8356,
+      "z": -0.6747,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 35,
+      "el": "C",
+      "x": 4.042,
+      "y": -1.832,
+      "z": -0.6329,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 3,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 36,
+      "el": "C",
+      "x": 3.2184,
+      "y": -2.399,
+      "z": -0.3348,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 7,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 37,
+      "el": "C",
+      "x": 2.3134,
+      "y": -1.9724,
+      "z": -0.0789,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 17,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": "g4_ph",
+      "group_l2": null
+    },
+    {
+      "id": 38,
+      "el": "C",
+      "x": 2.4164,
+      "y": 0.3532,
+      "z": 0.1361,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 27,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 39,
+      "el": "C",
+      "x": 3.0242,
+      "y": 1.1524,
+      "z": 0.0626,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 15,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 40,
+      "el": "C",
+      "x": 2.6188,
+      "y": 2.076,
+      "z": -0.0254,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 1,
+      "sym_class": 25,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 41,
+      "el": "C",
+      "x": 1.6172,
+      "y": 2.1658,
+      "z": -0.0358,
+      "charge": 0,
+      "charge_ionic": 0,
+      "aromatic": true,
+      "nH": 0,
+      "sym_class": 34,
+      "role": "backbone",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 42,
+      "el": "Cu",
+      "x": -0.2264,
+      "y": -0.484,
+      "z": 0.3556,
+      "charge": 0,
+      "charge_ionic": 1,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 40,
+      "role": "metal",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    },
+    {
+      "id": 43,
+      "el": "H",
+      "x": -0.7002,
+      "y": -1.2846,
+      "z": 0.528,
+      "charge": 0,
+      "charge_ionic": -1,
+      "aromatic": false,
+      "nH": 0,
+      "sym_class": 0,
+      "role": "hydride",
+      "angle_deg": 120.0,
+      "group_l1": null,
+      "group_l2": null
+    }
+  ],
+  "bonds": [
+    {
+      "a": 0,
+      "b": 1,
+      "a0": 0,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 1,
+      "b": 2,
+      "a0": 1,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 1,
+      "b": 3,
+      "a0": 1,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 3,
+      "b": 4,
+      "a0": 3,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 4,
+      "b": 5,
+      "a0": 4,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 5,
+      "b": 6,
+      "a0": 5,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 6,
+      "b": 7,
+      "a0": 6,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 7,
+      "b": 8,
+      "a0": 7,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 8,
+      "b": 9,
+      "a0": 8,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 9,
+      "b": 10,
+      "a0": 9,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 10,
+      "b": 11,
+      "a0": 10,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 11,
+      "b": 12,
+      "a0": 11,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 12,
+      "b": 13,
+      "a0": 12,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 13,
+      "b": 14,
+      "a0": 13,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 8,
+      "b": 15,
+      "a0": 8,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 15,
+      "b": 16,
+      "a0": 15,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 16,
+      "b": 17,
+      "a0": 16,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 17,
+      "b": 18,
+      "a0": 17,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 18,
+      "b": 19,
+      "a0": 18,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 19,
+      "b": 20,
+      "a0": 19,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 7,
+      "b": 21,
+      "a0": 7,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 21,
+      "b": 22,
+      "a0": 21,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 22,
+      "b": 23,
+      "a0": 22,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 23,
+      "b": 24,
+      "a0": 23,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 24,
+      "b": 25,
+      "a0": 24,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 25,
+      "b": 26,
+      "a0": 25,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 26,
+      "b": 27,
+      "a0": 26,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 27,
+      "b": 28,
+      "a0": 27,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 28,
+      "b": 29,
+      "a0": 28,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 29,
+      "b": 30,
+      "a0": 29,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 30,
+      "b": 31,
+      "a0": 30,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 25,
+      "b": 32,
+      "a0": 25,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 32,
+      "b": 33,
+      "a0": 32,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 33,
+      "b": 34,
+      "a0": 33,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 34,
+      "b": 35,
+      "a0": 34,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 35,
+      "b": 36,
+      "a0": 35,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 36,
+      "b": 37,
+      "a0": 36,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 24,
+      "b": 38,
+      "a0": 24,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 38,
+      "b": 39,
+      "a0": 38,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 39,
+      "b": 40,
+      "a0": 39,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 40,
+      "b": 41,
+      "a0": 40,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 41,
+      "b": 1,
+      "a0": 41,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 21,
+      "b": 3,
+      "a0": 21,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 41,
+      "b": 23,
+      "a0": 41,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 14,
+      "b": 9,
+      "a0": 14,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 20,
+      "b": 15,
+      "a0": 20,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 31,
+      "b": 26,
+      "a0": 31,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 37,
+      "b": 32,
+      "a0": 37,
+      "order": 1.5,
+      "type": "aromatic",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 42,
+      "b": 43,
+      "a0": 42,
+      "order": 1.0,
+      "type": "single",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 8,
+      "b": 42,
+      "a0": 8,
+      "order": 1.0,
+      "type": "dative",
+      "wedge": "none",
+      "axis": false
+    },
+    {
+      "a": 25,
+      "b": 42,
+      "a0": 25,
+      "order": 1.0,
+      "type": "dative",
+      "wedge": "none",
+      "axis": false
+    }
+  ],
+  "rings": [
+    [
+      1,
+      3,
+      21,
+      22,
+      23,
+      41
+    ],
+    [
+      4,
+      3,
+      21,
+      7,
+      6,
+      5
+    ],
+    [
+      10,
+      9,
+      14,
+      13,
+      12,
+      11
+    ],
+    [
+      16,
+      15,
+      20,
+      19,
+      18,
+      17
+    ],
+    [
+      27,
+      26,
+      31,
+      30,
+      29,
+      28
+    ],
+    [
+      33,
+      32,
+      37,
+      36,
+      35,
+      34
+    ],
+    [
+      38,
+      24,
+      23,
+      41,
+      40,
+      39
+    ]
+  ],
+  "groups": [
+    {
+      "id": "g1_ph",
+      "label": "Ph",
+      "atoms": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "attach": 8,
+      "anchor": 9,
+      "level": 1,
+      "kind": "ph"
+    },
+    {
+      "id": "g2_ph",
+      "label": "Ph",
+      "atoms": [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "attach": 8,
+      "anchor": 15,
+      "level": 1,
+      "kind": "ph"
+    },
+    {
+      "id": "g3_ph",
+      "label": "Ph",
+      "atoms": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "attach": 25,
+      "anchor": 26,
+      "level": 1,
+      "kind": "ph"
+    },
+    {
+      "id": "g4_ph",
+      "label": "Ph",
+      "atoms": [
+        32,
+        33,
+        34,
+        35,
+        36,
+        37
+      ],
+      "attach": 25,
+      "anchor": 32,
+      "level": 1,
+      "kind": "ph"
+    }
+  ],
+  "cip": {},
+  "symmetry": {
+    "classes": [
+      [
+        0,
+        2
+      ],
+      [
+        3,
+        41
+      ],
+      [
+        4,
+        40
+      ],
+      [
+        5,
+        39
+      ],
+      [
+        6,
+        38
+      ],
+      [
+        7,
+        24
+      ],
+      [
+        8,
+        25
+      ],
+      [
+        9,
+        15,
+        26,
+        32
+      ],
+      [
+        10,
+        14,
+        16,
+        20,
+        27,
+        31,
+        33,
+        37
+      ],
+      [
+        11,
+        13,
+        17,
+        19,
+        28,
+        30,
+        34,
+        36
+      ],
+      [
+        12,
+        18,
+        29,
+        35
+      ],
+      [
+        21,
+        23
+      ]
+    ],
+    "mirror_pairs": [
+      [
+        0,
+        2
+      ],
+      [
+        3,
+        41
+      ],
+      [
+        4,
+        40
+      ],
+      [
+        5,
+        39
+      ],
+      [
+        6,
+        38
+      ],
+      [
+        7,
+        24
+      ],
+      [
+        8,
+        25
+      ],
+      [
+        21,
+        23
+      ]
+    ],
+    "axis": {
+      "p1": [
+        -0.22642324580702658,
+        -0.48399062267569604
+      ],
+      "p2": [
+        0.005391029662072245,
+        0.011523586254183265
+      ]
+    },
+    "point_group_hint": "C2"
+  }
+}

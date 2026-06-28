@@ -1,0 +1,18 @@
+[
+  {
+    "key": "dtbm_segphos",
+    "name": "(DTBM-SEGPhos)Cu-H"
+  },
+  {
+    "key": "xantphos",
+    "name": "(Xantphos)Cu-H"
+  },
+  {
+    "key": "dpephos",
+    "name": "(DPEphos)Cu-H"
+  },
+  {
+    "key": "ph_bpe",
+    "name": "(Ph-BPE)Cu-H"
+  }
+]

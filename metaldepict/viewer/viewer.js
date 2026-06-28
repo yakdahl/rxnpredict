@@ -30,7 +30,7 @@
   const donorSet = new Set(M.metal.donors);
 
   let LEVEL = "l1", running = true, showWedge = true, showCharge = true,
-      showAllH = false, enforceSym = true, repScale = 0.55;
+      showAllH = false, enforceSym = false, repScale = 0.30;
 
   // characteristic bond length (world units) from the initial layout
   let L0 = (function () {
@@ -45,6 +45,7 @@
 
   // ----------------------------------------------------------- view graph
   let view = null;
+  let curBL = 50, curHalo = 4;   // current on-screen bond length / halo (set in render)
   function nodeRadius(kind, el, label) {
     if (kind === "super") return (0.95 + 0.22 * (label ? label.length : 3)) * L0;
     if (el === "Cu") return 0.62 * L0;
@@ -109,136 +110,178 @@
       if (na.kind === "super" || nb.kind === "super") { type = "super"; order = 1; wedge = "none"; }
       else if (b.type === "dative") { type = "dative"; }
       else if ((b.a === metalId && b.b === hydrideId) || (b.b === metalId && b.a === hydrideId)) type = "metalH";
-      edgeMap.set(k, { na, nb, type, order, wedge, a0, b0 });
+      edgeMap.set(k, { na, nb, type, order, wedge, a0, b0, axis: !!b.axis });
     });
     const edges = [...edgeMap.values()];
 
     const pk = (a, b) => a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key;
 
-    // ---- HARD constraints: uniform bonds + regular-polygon rings ----
-    const hard = [];
-    edges.forEach(e => hard.push({ a: e.na, b: e.nb, d: L0 * lenFactor(e.type) }));
-    const ringPair = new Set();
+    // ---- RIGID-BODY SEGMENTS -----------------------------------------------
+    // Physics acts on *segments*, not individual bonds. Each fused-ring system
+    // and each visible abbreviation group (t-Bu, OMe ...) is one rigid body
+    // whose CoordGen shape is frozen, so rings stay perfect regular polygons and
+    // t-Bu groups never squish; the bodies translate/rotate to remove overlap.
+    // Free atoms (P, Cu, H, linkers) and collapsed-group labels are point bodies.
+    const ringSystems = [];                  // fused ring systems = Set(atomId)
     (M.rings || []).forEach(ring => {
-      if (ring.some(id => hidden.has(id))) return;          // ring not fully visible
-      const ns = ring.map(id => nodeByKey.get("a:" + id));
-      if (ns.some(x => !x)) return;
-      const n = ns.length;
-      for (let i = 0; i < n; i++)
-        for (let j = i + 1; j < n; j++) {
-          let k = j - i; k = Math.min(k, n - k);
-          hard.push({ a: ns[i], b: ns[j], d: chord(k, n) });
-          ringPair.add(pk(ns[i], ns[j]));
-        }
+      if (ring.some(id => hidden.has(id))) return;
+      const hits = ringSystems.filter(s => ring.some(id => s.has(id)));
+      let s;
+      if (hits.length === 0) { s = new Set(); ringSystems.push(s); }
+      else { s = hits[0]; for (let t = 1; t < hits.length; t++) {
+        hits[t].forEach(id => s.add(id)); ringSystems.splice(ringSystems.indexOf(hits[t]), 1); } }
+      ring.forEach(id => s.add(id));
+    });
+    const rigidGroups = M.groups.filter(g => g.level === 1 && !g.atoms.some(id => hidden.has(id)));
+
+    const bodies = [];
+    const bodyOfKey = new Map();
+    function addBody(keys, refs) {
+      let cx = 0, cy = 0; refs.forEach(r => { cx += r.x; cy += r.y; }); cx /= refs.length; cy /= refs.length;
+      const local = refs.map((r, k) => ({ key: keys[k], ref: r, lx: r.x - cx, ly: r.y - cy }));
+      let I = 0; local.forEach(l => I += l.lx * l.lx + l.ly * l.ly);
+      const b = { local, cx, cy, angle: 0, fx: 0, fy: 0, torque: 0, vx: 0, vy: 0, omega: 0,
+        mass: Math.max(1, refs.length), inertia: Math.max(I, 0.08 * L0 * L0), pinned: false };
+      keys.forEach(k => bodyOfKey.set(k, b));
+      bodies.push(b); return b;
+    }
+    const inSeg = new Set();
+    ringSystems.forEach(sys => { const ids = [...sys];
+      addBody(ids.map(id => "a:" + id), ids.map(id => atom.get(id))); ids.forEach(id => inSeg.add(id)); });
+    rigidGroups.forEach(g => { const ids = g.atoms.filter(id => !inSeg.has(id));
+      if (ids.length) { addBody(ids.map(id => "a:" + id), ids.map(id => atom.get(id))); ids.forEach(id => inSeg.add(id)); } });
+    M.atoms.forEach(a => { if (!hidden.has(a.id) && !inSeg.has(a.id)) addBody(["a:" + a.id], [atom.get(a.id)]); });
+    collapsed.forEach(g => addBody(["g:" + g.id], [sup.get(g.id)]));
+    nodes.forEach(n => { n._body = bodyOfKey.get(n.key); });
+
+    // joints = bonds whose endpoints are in different bodies (intra-body = rigid)
+    const joints = [];
+    edges.forEach(e => {
+      const ba = bodyOfKey.get(e.na.key), bb = bodyOfKey.get(e.nb.key);
+      if (!ba || !bb || ba === bb) return;
+      joints.push({ ba, la: ba.local.find(l => l.key === e.na.key),
+        bb, lb: bb.local.find(l => l.key === e.nb.key), rest: L0 * lenFactor(e.type) });
     });
 
-    // ---- SOFT constraints: 1-3 bond angles (flex a little to de-overlap) ----
+    // angle springs only at FREE (single-atom) centres -- P, Cu, linkers -- to
+    // keep their local geometry; ring/group internal angles are handled by rigidity.
     const nbr = new Map(nodes.map(n => [n.key, []]));
     edges.forEach(e => { nbr.get(e.na.key).push(e); nbr.get(e.nb.key).push(e); });
-    const angles = [];
+    const angleSprings = [];
     nodes.forEach(c => {
-      if (c.kind !== "atom") return;                        // angles about real atoms
+      if (c.kind !== "atom" || !c._body || c._body.local.length > 1) return;
       const es = nbr.get(c.key);
       const ang = (c.data.angle_deg || 120) * Math.PI / 180;
       for (let i = 0; i < es.length; i++)
         for (let j = i + 1; j < es.length; j++) {
           const oi = es[i].na === c ? es[i].nb : es[i].na;
           const oj = es[j].na === c ? es[j].nb : es[j].na;
-          if (ringPair.has(pk(oi, oj))) continue;            // ring already fixes it (hard)
           const li = L0 * lenFactor(es[i].type), lj = L0 * lenFactor(es[j].type);
-          const target = Math.sqrt(li * li + lj * lj - 2 * li * lj * Math.cos(ang));
-          // the metal's trigonal angles are HARD -> a clean 120 deg coordination
-          if (c.id === metalId) hard.push({ a: oi, b: oj, d: target });
-          else angles.push({ i: oi, j: oj, target });
+          angleSprings.push({ oi, oj, target: Math.sqrt(li * li + lj * lj - 2 * li * lj * Math.cos(ang)) });
         }
     });
 
-    // excluded pairs for repulsion (anything already geometrically constrained)
-    // -- but bulky abbreviation superatoms must still repel their 1-3 siblings,
-    // otherwise two DTBM groups on the same P collapse onto each other.
     const excl = new Set();
-    hard.forEach(c => excl.add(pk(c.a, c.b)));   // bonded/ring pairs never repel
-    // 1-3 angle pairs normally don't repel, but a bulky superatom must repel its
-    // siblings so two DTBM groups on one P don't collapse together.
-    angles.forEach(p => { if (p.i.kind !== "super" && p.j.kind !== "super") excl.add(pk(p.i, p.j)); });
-
+    edges.forEach(e => excl.add(pk(e.na, e.nb)));
     let c0x = 0, c0y = 0; nodes.forEach(n => { c0x += n.ref.x; c0y += n.ref.y; });
     const centroid0 = { x: c0x / nodes.length, y: c0y / nodes.length };
-    view = { nodes, nodeByKey, edges, hard, angles, excl, keyForAtom, pk, centroid0 };
+    view = { nodes, nodeByKey, edges, bodies, bodyOfKey, joints, angleSprings,
+      excl, keyForAtom, pk, centroid0 };
+  }
+
+  function syncBody(b) {
+    const c = Math.cos(b.angle), s = Math.sin(b.angle);
+    b.local.forEach(l => { l.ref.x = b.cx + l.lx * c - l.ly * s; l.ref.y = b.cy + l.lx * s + l.ly * c; });
   }
 
   function nodeForAtom(id) { return view.nodeByKey.get(view.keyForAtom(id)); }
 
   // ---------------------------------------------------------------- physics
-  // Hybrid Position-Based Dynamics, strictly 2D:
-  //   soft pass  -> angle springs + gentle repulsion (the "little relaxation"
-  //                 that keeps things from being locked into an overlap)
-  //   hard pass  -> project bond + ring constraints so bond lengths stay uniform
-  //                 and every ring stays a regular polygon.
+  // 2D RIGID-BODY dynamics on segments. Forces (joint springs between bodies,
+  // angle springs at free centres, fragment repulsion) become a net force +
+  // torque on each rigid body; bodies translate & rotate. Internal shapes never
+  // change, so rings stay regular and groups never squish.
   function step(dt) {
-    const nodes = view.nodes;
-    nodes.forEach(n => { n.fx = 0; n.fy = 0; });
+    const bodies = view.bodies, nodes = view.nodes;
+    bodies.forEach(b => { b.fx = 0; b.fy = 0; b.torque = 0; });
+    const applyForce = (b, px, py, fx, fy) => {
+      b.fx += fx; b.fy += fy; b.torque += (px - b.cx) * fy - (py - b.cy) * fx;
+    };
 
-    // soft: 1-3 angle springs (flexible)
-    const K13 = 0.18;
-    view.angles.forEach(p => {
-      const A = p.i.ref, B = p.j.ref;
+    // joint springs (bonds between bodies) -> rest length
+    const KJ = 0.45;
+    view.joints.forEach(J => {
+      const A = J.la.ref, B = J.lb.ref;
       let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
-      const f = K13 * (d - p.target) / d;
-      p.i.fx += f * dx; p.i.fy += f * dy; p.j.fx -= f * dx; p.j.fy -= f * dy;
+      const f = KJ * (d - J.rest) / d, fx = f * dx, fy = f * dy;
+      applyForce(J.ba, A.x, A.y, fx, fy); applyForce(J.bb, B.x, B.y, -fx, -fy);
     });
 
-    // soft: repulsion to spread overlapping, non-bonded fragments
-    // (relaxBoost anneals this high early in relax() to untangle, then eases)
-    const kRep = repScale * relaxBoost * 2.6 * L0 * L0;
+    // angle springs at free centres (P, Cu...) keep their local geometry
+    const KA = 0.35;
+    view.angleSprings.forEach(S => {
+      const A = S.oi.ref, B = S.oj.ref;
+      let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
+      const f = KA * (d - S.target) / d, fx = f * dx, fy = f * dy;
+      if (S.oi._body) applyForce(S.oi._body, A.x, A.y, fx, fy);
+      if (S.oj._body) applyForce(S.oj._body, B.x, B.y, -fx, -fy);
+    });
+
+    // repulsion between atoms of different, non-bonded bodies
+    const kRep = repScale * relaxBoost * 2.2 * L0 * L0;
     for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i], A = a.ref;
+      const a = nodes[i], A = a.ref, ba = a._body;
       for (let j = i + 1; j < nodes.length; j++) {
-        const b = nodes[j], B = b.ref;
+        const b = nodes[j];
+        if (b._body === ba) continue;
         if (view.excl.has(a.key < b.key ? a.key + "|" + b.key : b.key + "|" + a.key)) continue;
+        const B = b.ref;
         let dx = B.x - A.x, dy = B.y - A.y, d2 = dx * dx + dy * dy;
         if (d2 < 1e-6) { dx = (i - j) * 1e-3 || 1e-3; dy = 1e-3; d2 = dx * dx + dy * dy; }
         const d = Math.sqrt(d2), minD = a.r + b.r;
         let f = kRep / d2;
-        if (d < minD) f += 0.6 * (minD - d) / d;       // soft collision
+        if (d < minD) f += 0.5 * (minD - d) / d;
         const fx = f * dx / d, fy = f * dy / d;
-        a.fx -= fx; a.fy -= fy; b.fx += fx; b.fy += fy;
+        if (ba) applyForce(ba, A.x, A.y, -fx, -fy);
+        if (b._body) applyForce(b._body, B.x, B.y, fx, fy);
       }
     }
 
-    if (enforceSym) symmetrise(0.15);
+    if (enforceSym) symmetrise(0.12);
 
-    // integrate the soft forces (damped, clamped, 2D)
-    const damp = 0.82, maxV = 0.4 * L0;
-    nodes.forEach(n => {
-      const p = n.ref;
-      if (p.pinned) { p.vx = p.vy = 0; return; }
-      p.vx = (p.vx + n.fx * dt) * damp; p.vy = (p.vy + n.fy * dt) * damp;
-      const v = Math.hypot(p.vx, p.vy);
-      if (v > maxV) { p.vx *= maxV / v; p.vy *= maxV / v; }
-      p.x += p.vx * dt; p.y += p.vy * dt;
+    // integrate bodies (translate + rotate), damped & clamped
+    const damp = 0.80, adamp = 0.74, maxV = 0.35 * L0, maxW = 0.10;
+    bodies.forEach(b => {
+      if (b.pinned) { b.vx = b.vy = b.omega = 0; return; }
+      b.vx = (b.vx + b.fx / b.mass * dt) * damp;
+      b.vy = (b.vy + b.fy / b.mass * dt) * damp;
+      b.omega = (b.omega + b.torque / b.inertia * dt) * adamp;
+      const v = Math.hypot(b.vx, b.vy); if (v > maxV) { b.vx *= maxV / v; b.vy *= maxV / v; }
+      b.omega = Math.max(-maxW, Math.min(maxW, b.omega));
+      b.cx += b.vx * dt; b.cy += b.vy * dt; b.angle += b.omega * dt;
+      syncBody(b);
     });
 
-    // hard pass: project bond + ring distance constraints (Gauss-Seidel).
-    // Bonds last each pass so uniform bond length wins any residual conflict.
-    for (let pass = 0; pass < 18; pass++) {
-      for (const c of view.hard) {
-        const A = c.a.ref, B = c.b.ref;
+    // hard joint projection: keep every inter-body bond at its rest length by
+    // translating the two bodies (rotation is handled by the joint-spring torque
+    // above). This keeps bond lengths uniform without deforming any rigid body.
+    for (let pass = 0; pass < 6; pass++) {
+      view.joints.forEach(J => {
+        const A = J.la.ref, B = J.lb.ref;
         let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1e-6;
-        const diff = (d - c.d) / d;
-        const pa = A.pinned, pb = B.pinned;
-        if (pa && pb) continue;
+        const diff = (d - J.rest) / d, pa = J.ba.pinned, pb = J.bb.pinned;
+        if (pa && pb) return;
         const sa = pa ? 0 : (pb ? 1 : 0.5), sb = pb ? 0 : (pa ? 1 : 0.5);
-        A.x += sa * diff * dx; A.y += sa * diff * dy;
-        B.x -= sb * diff * dx; B.y -= sb * diff * dy;
-      }
+        J.ba.cx += sa * diff * dx; J.ba.cy += sa * diff * dy; syncBody(J.ba);
+        J.bb.cx -= sb * diff * dx; J.bb.cy -= sb * diff * dy; syncBody(J.bb);
+      });
     }
 
     // drift-free recentring (translation only; skipped while the user drags)
-    if (!nodes.some(n => n.ref.pinned)) {
+    if (!bodies.some(b => b.pinned)) {
       let cx = 0, cy = 0; nodes.forEach(n => { cx += n.ref.x; cy += n.ref.y; });
       cx = cx / nodes.length - view.centroid0.x; cy = cy / nodes.length - view.centroid0.y;
-      nodes.forEach(n => { n.ref.x -= cx; n.ref.y -= cy; });
+      bodies.forEach(b => { b.cx -= cx; b.cy -= cy; syncBody(b); });
     }
   }
 
@@ -258,17 +301,18 @@
       return { x: Mt.x + px - ex, y: Mt.y + py - ey };
     };
     M.symmetry.mirror_pairs.forEach(([i, j]) => {
-      const ni = nodeForAtom(i), nj = nodeForAtom(j);
-      if (!ni || !nj || ni === nj) return;
-      const ti = reflect(nj.ref), tj = reflect(ni.ref);
-      ni.fx += k * (ti.x - ni.ref.x); ni.fy += k * (ti.y - ni.ref.y);
-      nj.fx += k * (tj.x - nj.ref.x); nj.fy += k * (tj.y - nj.ref.y);
+      const bi = view.bodyOfKey.get("a:" + i), bj = view.bodyOfKey.get("a:" + j);
+      const pi = atom.get(i), pj = atom.get(j);
+      if (!bi || !bj || bi === bj) return;
+      const ti = reflect(pj), tj = reflect(pi);
+      bi.fx += k * (ti.x - pi.x); bi.fy += k * (ti.y - pi.y);
+      bj.fx += k * (tj.x - pj.x); bj.fy += k * (tj.y - pj.y);
     });
   }
 
   function relax(n, anneal = false) {
     for (let i = 0; i < n; i++) {
-      relaxBoost = anneal ? (i < n * 0.4 ? 3.0 : 1.0) : 1.0;
+      relaxBoost = anneal ? (i < n * 0.4 ? 1.6 : 1.0) : 1.0;
       step(1.0);
     }
     relaxBoost = 1.0;
@@ -315,6 +359,18 @@
     const gBonds = el("g", {}, svg);
     const gAtoms = el("g", {}, svg);
 
+    // ---- ChemDraw/ACS proportions: everything scales with the on-screen bond
+    // length BL (measured ratios -- line width ~0.045 BL, double-bond gap ~0.16,
+    // bold ~0.13, atom font ~0.55, label gap ~0.32). ----
+    const BL = L0 * scale;
+    curBL = BL;
+    const SW = Math.max(1.0, 0.045 * BL);
+    const BOLDW = Math.max(2.6, 0.13 * BL);
+    const DGAP = 0.16 * BL;
+    const FONT = Math.max(9, 0.55 * BL);
+    const SFONT = Math.max(9, 0.48 * BL);
+    curHalo = Math.max(2.5, 0.11 * BL);
+
     // ---- bonds ----
     view.edges.forEach(e => {
       const A = e.na, B = e.nb;
@@ -332,44 +388,46 @@
         let fx = sx(from.ref.x), fy = sy(from.ref.y), txx = sx(to.ref.x), tyy = sy(to.ref.y);
         let vx = txx - fx, vy = tyy - fy; const vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl;
         fx += vx * labelInset(from); fy += vy * labelInset(from);
-        txx -= vx * (labelInset(to) + 8); tyy -= vy * (labelInset(to) + 8);
-        el("line", { x1: fx, y1: fy, x2: txx, y2: tyy, stroke: "#555",
-          "stroke-width": 1.7, "stroke-dasharray": "1 0", "marker-end": "url(#arrow)" }, gBonds);
+        txx -= vx * (labelInset(to) + 0.12 * BL); tyy -= vy * (labelInset(to) + 0.12 * BL);
+        el("line", { x1: fx, y1: fy, x2: txx, y2: tyy, stroke: "#444",
+          "stroke-width": SW, "marker-end": "url(#arrow)" }, gBonds);
         return;
       }
       if (showWedge && (e.type !== "super") && (e.wedge === "up" || e.wedge === "down")) {
-        // narrow end at a0, wide end at b0
         const narrow = (e.a0 === A.id) ? { x: x1, y: y1 } : { x: x2, y: y2 };
         const wide = (e.a0 === A.id) ? { x: x2, y: y2 } : { x: x1, y: y1 };
-        const w = 5;
+        const w = 0.11 * BL;
         if (e.wedge === "up") {
           el("polygon", { points: `${narrow.x},${narrow.y} ${wide.x + px * w},${wide.y + py * w} ${wide.x - px * w},${wide.y - py * w}`,
             fill: "#23262b", stroke: "#23262b", "stroke-width": 0.5 }, gBonds);
         } else {
-          // hashed wedge
           const n = 6;
           for (let k = 1; k <= n; k++) {
             const t = k / (n + 1), w2 = w * t;
             const cx = narrow.x + (wide.x - narrow.x) * t, cy = narrow.y + (wide.y - narrow.y) * t;
             el("line", { x1: cx + px * w2, y1: cy + py * w2, x2: cx - px * w2, y2: cy - py * w2,
-              stroke: "#23262b", "stroke-width": 1.2 }, gBonds);
+              stroke: "#23262b", "stroke-width": SW }, gBonds);
           }
         }
         return;
       }
 
-      const stroke = "#2b2f36", sw = 1.6;
+      const stroke = "#1a1d22", sw = e.axis ? BOLDW : SW;   // bold = biaryl axis
       const drawLine = (ox, oy) => el("line", { x1: x1 + ox, y1: y1 + oy, x2: x2 + ox, y2: y2 + oy,
-        stroke, "stroke-width": sw, "stroke-linecap": "round" }, gBonds);
+        stroke, "stroke-width": sw, "stroke-linecap": "butt" }, gBonds);
       if (e.order === 2) {
-        const o = 2.4; drawLine(px * o, py * o); drawLine(-px * o, -py * o);
-      } else if (e.order === 1.5 || e.type === "aromatic") {
+        // ChemDraw double bond: full line + an inset shorter parallel line
         drawLine(0, 0);
-        // inner shorter line to read as aromatic
-        const o = 3.0, s = 0.14;
+        const o = DGAP, s = 0.16;
         el("line", { x1: x1 + px * o + ux * L * s, y1: y1 + py * o + uy * L * s,
           x2: x2 + px * o - ux * L * s, y2: y2 + py * o - uy * L * s,
-          stroke, "stroke-width": 1.1, "stroke-linecap": "round", opacity: .85 }, gBonds);
+          stroke, "stroke-width": SW, "stroke-linecap": "butt" }, gBonds);
+      } else if (e.order === 1.5 || e.type === "aromatic") {
+        drawLine(0, 0);
+        const o = DGAP, s = 0.16;
+        el("line", { x1: x1 + px * o + ux * L * s, y1: y1 + py * o + uy * L * s,
+          x2: x2 + px * o - ux * L * s, y2: y2 + py * o - uy * L * s,
+          stroke, "stroke-width": SW, "stroke-linecap": "butt" }, gBonds);
       } else {
         drawLine(0, 0);
       }
@@ -379,31 +437,23 @@
     view.nodes.forEach(n => {
       const X = sx(n.ref.x), Y = sy(n.ref.y);
       if (n.kind === "super") {
-        const wpx = (n.label.length * 7.4 + 14), hpx = 20;
-        el("rect", { x: X - wpx / 2, y: Y - hpx / 2, width: wpx, height: hpx, rx: 6,
-          fill: "#fff", stroke: "#888", "stroke-width": 1.3, "data-key": n.key, class: "node" }, gAtoms);
-        const t = el("text", { x: X, y: Y, "text-anchor": "middle", "dominant-baseline": "central",
-          "font-size": 13, "font-weight": 600, fill: "#333", "data-key": n.key, class: "node" }, gAtoms);
-        t.textContent = n.label;
+        // ChemDraw-style plain text label (no box), white halo for legibility
+        const wpx = n.label.length * SFONT * 0.62 + 8;
+        el("rect", { x: X - wpx / 2, y: Y - SFONT * 0.7, width: wpx, height: SFONT * 1.4, fill: "transparent",
+          "data-key": n.key, class: "node hit" }, gAtoms);              // invisible drag target
+        haloText(gAtoms, X, Y, n.label, SFONT, 600, "#23262b", n.key);
         return;
       }
       const el_ = n.el;
       const labelled = LABEL_ELEMENTS.has(el_) || el_ === "Cu" || (n.id === hydrideId) || (showAllH && el_ === "H");
-      // invisible hit target always present
       el("circle", { cx: X, cy: Y, r: Math.max(n.r * scale, 9), fill: "transparent",
-        "data-key": n.key, class: "node hit" }, gAtoms);
-      let glyphR = 6;
+        "data-key": n.key, class: "node hit" }, gAtoms);               // invisible hit target
+      let glyphR = 0.10 * BL;
       if (n.id === metalId) {
-        el("circle", { cx: X, cy: Y, r: 11, fill: COLORS.Cu, stroke: "#7a4317", "stroke-width": 1.5, class: "glyph" }, gAtoms);
-        const t = el("text", { x: X, y: Y, "text-anchor": "middle", "dominant-baseline": "central",
-          "font-size": 12, "font-weight": 700, fill: "#fff" }, gAtoms);
-        t.textContent = "Cu"; glyphR = 11;
+        haloText(gAtoms, X, Y, "Cu", FONT, 700, COLORS.Cu); glyphR = 0.18 * BL;
       } else if (labelled) {
-        const col = COLORS[el_] || "#23262b";
-        el("circle", { cx: X, cy: Y, r: 9.5, fill: "#fff", class: "glyph" }, gAtoms);   // halo
-        const t = el("text", { x: X, y: Y, "text-anchor": "middle", "dominant-baseline": "central",
-          "font-size": 13.5, "font-weight": 700, fill: col }, gAtoms);
-        t.textContent = (n.id === hydrideId) ? "H" : el_; glyphR = 9.5;
+        haloText(gAtoms, X, Y, (n.id === hydrideId) ? "H" : el_, FONT, 700, COLORS[el_] || "#23262b");
+        glyphR = 0.16 * BL;
       }
       // charges as full +/- symbols (offset by the fixed visible glyph radius)
       if (showCharge) {
@@ -413,25 +463,33 @@
     });
   }
 
-  function labelInset(n) {
-    if (n.kind === "super") return n.label.length * 3.7 + 8;
-    if (n.id === metalId) return 12;
-    if (LABEL_ELEMENTS.has(n.el) || n.id === hydrideId) return 10;
-    return 1.5;
+  // text with a background-coloured halo (paint-order: stroke) -- legible over
+  // bonds without any box, ChemDraw style.
+  function haloText(g, X, Y, txt, size, weight, fill, dataKey) {
+    const attrs = { x: X, y: Y, "text-anchor": "middle", "dominant-baseline": "central",
+      "font-size": size, "font-weight": weight, fill, stroke: "#f7f7f4",
+      "stroke-width": curHalo, "paint-order": "stroke", "stroke-linejoin": "round" };
+    if (dataKey) { attrs["data-key"] = dataKey; attrs.class = "node"; }
+    const t = el("text", attrs, g); t.textContent = txt; return t;
   }
-  // charge as drawn line shapes (never a font glyph), geometrically centred in
-  // the badge circle: a minus is one centred segment, a plus adds a centred
-  // vertical segment -- both symmetric about (cx, cy).
+  function labelInset(n) {
+    if (n.kind === "super") return n.label.length * curBL * 0.16 + curBL * 0.1;
+    if (n.id === metalId) return curBL * 0.34;
+    if (LABEL_ELEMENTS.has(n.el) || n.id === hydrideId) return curBL * 0.30;
+    return curBL * 0.02;
+  }
+  // charge as drawn line shapes (never a font glyph), centred in the badge circle
   function drawCharge(g, X, Y, r, q) {
-    const cx = X + r * 0.9 + 7, cy = Y - r * 0.9 - 5;
+    const rr = Math.max(6, 0.15 * curBL);
+    const cx = X + r + rr * 0.5, cy = Y - r - rr * 0.5;
     const col = q > 0 ? "#c0392b" : "#2b5fcc";
-    el("circle", { cx, cy, r: 7.6, fill: "#fff", stroke: col, "stroke-width": 1.4, class: "glyph" }, g);
-    const a = 4.0;
+    el("circle", { cx, cy, r: rr, fill: "#fff", stroke: col, "stroke-width": Math.max(1.2, 0.02 * curBL), class: "glyph" }, g);
+    const a = rr * 0.55;
     el("line", { x1: cx - a, y1: cy, x2: cx + a, y2: cy, stroke: col,
-      "stroke-width": 1.9, "stroke-linecap": "round", class: "glyph" }, g);
+      "stroke-width": Math.max(1.5, 0.026 * curBL), "stroke-linecap": "round", class: "glyph" }, g);
     if (q > 0)
       el("line", { x1: cx, y1: cy - a, x2: cx, y2: cy + a, stroke: col,
-        "stroke-width": 1.9, "stroke-linecap": "round", class: "glyph" }, g);
+        "stroke-width": Math.max(1.5, 0.026 * curBL), "stroke-linecap": "round", class: "glyph" }, g);
   }
 
   // ---------------------------------------------------------------- legend
@@ -467,12 +525,11 @@
   svg.addEventListener("pointerdown", ev => {
     const key = ev.target.getAttribute && ev.target.getAttribute("data-key");
     if (key) {
-      const n = view.nodeByKey.get(key);
-      // hold the node during the gesture; a plain click (no move) is reverted
-      // on pointerup so it does not count as a pin -- that keeps double-click
-      // free to toggle the pin cleanly.
-      drag = { n, wasPinned: n.ref.pinned, moved: false };
-      n.ref.pinned = true; n.ref.vx = n.ref.vy = 0;
+      const n = view.nodeByKey.get(key), b = n._body;
+      // drag the whole rigid body the atom belongs to; a plain click (no move)
+      // is reverted on pointerup so double-click can toggle the pin cleanly.
+      drag = { n, b, local: b && b.local.find(l => l.key === key), wasPinned: b && b.pinned, moved: false };
+      if (b) { b.pinned = true; b.vx = b.vy = b.omega = 0; }
       svg.setPointerCapture(ev.pointerId); svg.classList.add("dragging");
     } else {
       pan = { x: ev.clientX, y: ev.clientY, tx, ty };
@@ -480,11 +537,12 @@
     }
   });
   svg.addEventListener("pointermove", ev => {
-    if (drag) {
+    if (drag && drag.b) {
       const rect = svg.getBoundingClientRect();
       const w = inv(ev.clientX - rect.left, ev.clientY - rect.top);
-      drag.n.ref.x = w.x; drag.n.ref.y = w.y; drag.n.ref.vx = drag.n.ref.vy = 0;
-      drag.moved = true;
+      const b = drag.b, c = Math.cos(b.angle), s = Math.sin(b.angle), l = drag.local;
+      b.cx = w.x - (l.lx * c - l.ly * s); b.cy = w.y - (l.lx * s + l.ly * c);
+      b.vx = b.vy = b.omega = 0; syncBody(b); drag.moved = true;
       if (!running) render();
     } else if (pan) {
       tx = pan.tx + (ev.clientX - pan.x); ty = pan.ty + (ev.clientY - pan.y);
@@ -492,14 +550,14 @@
     }
   });
   function endPointer() {
-    if (drag && !drag.moved) drag.n.ref.pinned = drag.wasPinned;  // a click is not a pin
+    if (drag && drag.b && !drag.moved) drag.b.pinned = drag.wasPinned;  // a click is not a pin
     drag = null; pan = null; svg.classList.remove("dragging");
   }
   svg.addEventListener("pointerup", endPointer);
   svg.addEventListener("pointercancel", endPointer);
   svg.addEventListener("dblclick", ev => {
     const key = ev.target.getAttribute && ev.target.getAttribute("data-key");
-    if (key) { const n = view.nodeByKey.get(key); n.ref.pinned = !n.ref.pinned; if (!running) render(); }
+    if (key) { const b = view.nodeByKey.get(key)._body; if (b) { b.pinned = !b.pinned; if (!running) render(); } }
   });
   svg.addEventListener("wheel", ev => {
     ev.preventDefault();
@@ -518,7 +576,7 @@
       document.querySelectorAll("[data-level]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       LEVEL = btn.getAttribute("data-level");
-      buildView(); relax(240, true); fit(); render();
+      buildView(); relax(90, true); fit(); render();
     });
   });
   const playBtn = document.getElementById("btn-play");
@@ -537,7 +595,7 @@
   document.getElementById("btn-reset").addEventListener("click", () => {
     M.atoms.forEach(a => { const p = atom.get(a.id); p.x = a.x; p.y = a.y; p.vx = p.vy = 0; p.pinned = false; });
     sup.forEach(s => s.pinned = false);
-    buildView(); relax(240, true); fit(); render();   // relax like the initial load
+    buildView(); relax(90, true); fit(); render();   // relax like the initial load
   });
   document.getElementById("btn-svg").addEventListener("click", () => {
     const w = W(), h = H();
@@ -559,13 +617,13 @@
   window.addEventListener("resize", () => { fit(); render(); });
 
   // ---------------------------------------------------------------- go
-  buildView(); relax(280, true); fit(); legend(); render();
+  buildView(); relax(110, true); fit(); legend(); render();
   requestAnimationFrame(frame);
 
   // expose for headless testing / screenshots
   window.__metaldepict = {
     relax: (n) => { relax(n || 200, true); render(); },
-    setLevel: (lv) => { LEVEL = lv; buildView(); relax(240, true); fit(); render(); },
+    setLevel: (lv) => { LEVEL = lv; buildView(); relax(90, true); fit(); render(); },
     fit: () => { fit(); render(); },
     overlapScore, metrics, view: () => view, stop: () => { running = false; }
   };

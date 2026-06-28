@@ -27,7 +27,7 @@
       <label class="title">physics</label>
       <button id="btn-play" class="active">▶ run</button>
       <button id="btn-relax">relax 300×</button>
-      <label class="chk"><input type="checkbox" id="chk-sym" checked> enforce C₂</label>
+      <label class="chk"><input type="checkbox" id="chk-sym"> enforce C₂</label>
     </div>
 
     <div class="group">
@@ -39,7 +39,7 @@
 
     <div class="group">
       <label class="title">spread</label>
-      <input type="range" id="rng-rep" min="0" max="100" value="55">
+      <input type="range" id="rng-rep" min="0" max="100" value="30">
     </div>
 
     <div class="group">
@@ -57,7 +57,14 @@
   </div>
 </div>
 
-<script src="molecule_data.js"></script>
+<script>
+  // load window.MOLECULE: ?mol=<name> -> data/<name>.js, else default
+  (function () {
+    var p = new URLSearchParams(location.search).get("mol");
+    var src = p ? ("data/" + p.replace(/[^a-z0-9_]/gi, "") + ".js") : "molecule_data.js";
+    document.write('<scr' + 'ipt src="' + src + '"></scr' + 'ipt>');
+  })();
+</script>
 <script src="viewer.js"></script>
 </body>
 </html>

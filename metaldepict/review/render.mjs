@@ -21,7 +21,7 @@ const here = path.dirname(url.fileURLToPath(import.meta.url));
 const level = process.argv[2] || "l1";
 const outPng = process.argv[3] || `/tmp/metaldepict_${level}.png`;
 const outJson = process.argv[4] || `/tmp/metaldepict_${level}.metrics.json`;
-const STEPS = +(process.env.PW_STEPS || 900);
+const STEPS = +(process.env.PW_STEPS || 80);
 
 const corePath = process.env.PW_CORE || "playwright-core";
 const { chromium } = require(corePath);

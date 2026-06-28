@@ -87,15 +87,18 @@ def embed_rdkit(complex_mol: Chem.Mol) -> Chem.Mol:
 
 def generate_conformer(
     out_xyz: str | Path,
+    lig: Chem.Mol | None = None,
 ) -> tuple[Chem.Mol, dict, str]:
     """
     Returns (complex_mol_3d, info, method).  Writes an .xyz file to `out_xyz`.
 
-    `complex_mol_3d` is the *heavy-atom* complex (explicit Cu and hydride H,
-    other H implicit) carrying a 3D conformer in conformer id 0, so atom indices
-    line up with the depiction graph.
+    `lig` is any bidentate-phosphine ligand mol (default: DTBM-SEGPhos); the two
+    P atoms are chelated to Cu-H.  `complex_mol_3d` is the heavy-atom complex
+    (explicit Cu and hydride H, other H implicit) carrying a 3D conformer in
+    conformer id 0, so atom indices line up with the depiction graph.
     """
-    lig = _chem.make_dtbm_segphos()
+    if lig is None:
+        lig = _chem.make_dtbm_segphos()
     lig_smiles = Chem.MolToSmiles(lig)
     complex_mol, info = _chem.build_complex(lig)
 

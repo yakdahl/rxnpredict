@@ -110,7 +110,34 @@ def detect_groups(mol: Chem.Mol) -> list[GroupHit]:
             )
             claimed |= atoms
 
+    # monosubstituted phenyl -> "Ph"  (generalises 'medium' to PPh2 ligands)
+    counter = _detect_phenyls(mol, claimed, hits, counter)
     return hits
+
+
+def _detect_phenyls(mol: Chem.Mol, claimed: set[int], hits: list[GroupHit], counter: int) -> int:
+    ri = mol.GetRingInfo()
+    for ring in ri.AtomRings():
+        atoms = set(ring)
+        if len(ring) != 6 or atoms & claimed:
+            continue
+        if not all(mol.GetAtomWithIdx(a).GetSymbol() == "C"
+                   and mol.GetAtomWithIdx(a).GetIsAromatic() for a in ring):
+            continue
+        if any(ri.NumAtomRings(a) > 1 for a in ring):       # fused -> not a plain phenyl
+            continue
+        ext = [(a, n.GetIdx()) for a in ring
+               for n in mol.GetAtomWithIdx(a).GetNeighbors() if n.GetIdx() not in atoms]
+        if len(ext) != 1:                                    # exactly one attachment = monosubstituted
+            continue
+        anchor, attach = ext[0]
+        if mol.GetAtomWithIdx(attach).GetSymbol() == "Cu":
+            continue
+        counter += 1
+        hits.append(GroupHit(gid=f"g{counter}_ph", label="Ph", atoms=sorted(atoms),
+                             attach=attach, anchor=anchor, kind="ph", members=atoms))
+        claimed |= atoms
+    return counter
 
 
 def label_for_direction(label: str, dx: float) -> str:

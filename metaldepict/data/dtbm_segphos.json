@@ -28,12 +28,6 @@
       "is_chiral": false,
       "chirality": null,
       "delta_lambda": null,
-      "perceived": {
-        "geometry_name": "bent",
-        "cn": 2,
-        "ox": -3,
-        "trex_string": "Cu{-1} | L=[ SMILES:COC1C(C(C)(C)C)CC(P(C2CC(C(C)(C)C)C(OC)C(C(C)(C)C)C2)C2CCC3OCOC3C2C2C3OCOC3CCC2P(C2CC(C(C)(C)C)C(OC)C(C(C)(C)C)C2)C2CC(C(C)(C)C)C(OC)C(C(C)(C)C)C2)CC1C(C)(C)C, SMILES:[H-] ] | MAP:{ 1:11, 2:1 }"
-      },
       "canonical": {
         "available": true,
         "canonicalised": true,
@@ -41,16 +35,7 @@
         "cn": 3,
         "geometry": "trpl"
       },
-      "ideal_geometry": {
-        "metal_donor_A": {
-          "P": 2.25,
-          "H": 1.5
-        },
-        "cis_angle_deg": 120.0,
-        "trex_geometry_available": true
-      },
-      "is_chiral_overall": true,
-      "chirality_note": "axial chirality (atropisomeric biaryl backbone)"
+      "is_chiral_overall": true
     },
     "ideal_bond": {
       "aromatic": 1.39,
