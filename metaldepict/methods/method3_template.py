@@ -76,8 +76,8 @@ def core(sc, cu_pos, pu_pos, pd_pos):
     cu = sc.atom(cu_pos, label="Cu", color=CU_COL)
     h = sc.atom(vadd(cu_pos, (1.15 * L, 0.0)), label="H")
     sc.bond(cu, h, order=1)
-    sc.bond(pu, cu, order=1, kind="dative")
-    sc.bond(pd, cu, order=1, kind="dative")
+    sc.bond(pu, cu, order=1, kind="coord")     # dashed coordination bond (P->Cu)
+    sc.bond(pd, cu, order=1, kind="coord")
     return dict(pu=pu, pd=pd, cu=cu, h=h)
 
 

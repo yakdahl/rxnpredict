@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# extracted transcript images (keep only refs/curated/)
+refs/img_*
+methods/out/

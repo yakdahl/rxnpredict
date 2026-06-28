@@ -179,20 +179,14 @@ class Scene:
                     out.append(f'<line x1="{q1[0]:.2f}" y1="{q1[1]:.2f}" '
                                f'x2="{q2[0]:.2f}" y2="{q2[1]:.2f}" '
                                f'stroke="{col}" stroke-width="{bw*0.75:.2f}"/>')
-            elif bd.kind == "dative":
+            elif bd.kind in ("dative", "coord"):
+                # coordinate / dative bond -> a simple DASHED line (no arrowhead),
+                # the conventional way to draw a metal<-donor coordination bond.
+                dash = f'{0.16 * L * scale:.2f},{0.13 * L * scale:.2f}'
                 out.append(f'<line x1="{pa[0]:.2f}" y1="{pa[1]:.2f}" '
                            f'x2="{pb[0]:.2f}" y2="{pb[1]:.2f}" '
-                           f'stroke="{col}" stroke-width="{bw:.2f}"/>')
-                d = vnorm(vsub(pb, pa))
-                pr = perp(d)
-                ah = 0.32 * L * scale
-                aw = 0.17 * L * scale
-                base = (pb[0] - d[0] * ah, pb[1] - d[1] * ah)
-                t1 = (base[0] + pr[0] * aw, base[1] + pr[1] * aw)
-                t2 = (base[0] - pr[0] * aw, base[1] - pr[1] * aw)
-                out.append(f'<polygon points="{pb[0]:.2f},{pb[1]:.2f} '
-                           f'{t1[0]:.2f},{t1[1]:.2f} {t2[0]:.2f},{t2[1]:.2f}" '
-                           f'fill="{col}"/>')
+                           f'stroke="{col}" stroke-width="{bw:.2f}" '
+                           f'stroke-dasharray="{dash}"/>')
             elif bd.kind == "bold":
                 out.append(f'<line x1="{pa[0]:.2f}" y1="{pa[1]:.2f}" '
                            f'x2="{pb[0]:.2f}" y2="{pb[1]:.2f}" '
