@@ -294,9 +294,24 @@ class Harness:
             "ringAngleDev": round(self._ring_angle_dev(), 2),
             "angleDevDeg": round(angleDev, 2),
             "overlap": ov,
+            "crowd": round(self._crowd(), 3),
             "coordLenErr": round(sum(coorderr) / len(coorderr), 3) if coorderr else 0,
             "symDev": round(self._sym_dev(), 3),
         }
+
+    def _crowd(self, factor=1.5):
+        """Soft near-contact / anti-collapse penalty: sum over cross-body
+        non-bonded pairs of the squared penetration into a clearance band of
+        factor*min_sep.  Unlike the hard `overlap` count this rewards genuine
+        WHITESPACE, so a method cannot game the judge by compressing groups
+        toward the metal until they merely-touch without strictly overlapping."""
+        tot = 0.0
+        for (a, b, mn) in self.overlaps:
+            d = _vlen(self.pos[a], self.pos[b])
+            clear = mn * factor
+            if d < clear:
+                tot += ((clear - d) / clear) ** 2
+        return tot
 
     def _ring_cycle(self, r):
         """Order a ring's atom set into a cyclic walk via ring-internal adjacency."""
@@ -414,7 +429,8 @@ DEFAULT_JUDGE = {
     "ring": 7.0,        # ringEdgeCV
     "ringang": 0.05,    # ringAngleDev (deg) -- regular polygons
     "coord": 1.6,       # coordLenErr -- P-Cu / Cu-H at target length
-    "overlap": 1.0,     # per overlapping non-bonded pair (count) -- hard penalty
+    "overlap": 1.0,     # per strictly-overlapping non-bonded pair (count)
+    "crowd": 1.0,       # soft near-contact / anti-collapse (rewards whitespace)
     "sym": 1.2,         # symDev -- C2 symmetry about the Cu-H axis
 }
 
@@ -427,6 +443,7 @@ def quality_loss(H, c=DEFAULT_JUDGE):
             + c["ringang"] * m["ringAngleDev"]
             + c["coord"] * m["coordLenErr"]
             + c["overlap"] * m["overlap"]
+            + c.get("crowd", 0.0) * m.get("crowd", 0.0)
             + c["sym"] * m["symDev"])
 
 
