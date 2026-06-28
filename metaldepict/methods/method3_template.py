@@ -176,12 +176,25 @@ def _pphos_phenyls(sc, c):
     text_arm(sc, c["pd"], -118, "Ph", length=1.05)
 
 
-def _xanthene_backbone(sc, c):
+def _pphos_dtbm(sc, c, dirs=(45, 118)):
+    """The DTBM analogue: two 3,5-di-tBu-4-OMe-phenyl (DTBM) aryls per P instead
+    of plain Ph, fanned widely so the bulky rings + t-Bu/OMe labels clear each
+    other (the physics relaxer spreads the rest).  `dirs` = the two fan angles
+    from the UPPER P (mirrored for the lower P); push them toward the open side
+    when the backbone is bulky on the left (xanthene / diaryl-ether)."""
+    da, db = dirs
+    _dtbm_aryl(sc, c["pu"], da)
+    _dtbm_aryl(sc, c["pu"], db)
+    _dtbm_aryl(sc, c["pd"], -da)
+    _dtbm_aryl(sc, c["pd"], -db)
+
+
+def _xanthene_backbone(sc, c, psub=_pphos_phenyls):
     """Build a PROPER fused tricyclic xanthene: a central 6-membered pyran ring
     (O at the far-left vertex, C(CH3)2 at the far-right vertex) with the two
     benzo rings fused onto its upper-left and lower-left edges.  Each benzo ring
     carries a P (which also bears two Ph)."""
-    _pphos_phenyls(sc, c)
+    psub(sc, c)
     # central pyran ring -- regular hexagon, centred left of the metal.
     cen = (1.95, 0.0)
     # orient so vertex0 points RIGHT (0 deg) = the spiro C(CH3)2 carbon, and the
@@ -258,10 +271,10 @@ def _benzo_p_vertex(sc, ring_ids, pid):
     return min(cand, key=lambda i: vlen(vsub(sc.atoms[i].pos, pp)))
 
 
-def _dpephos_backbone(sc, c):
+def _dpephos_backbone(sc, c, psub=_pphos_phenyls):
     """DPEphos: two SEPARATE benzo rings joined only by an ether O (no central
     ring, no CMe2).  Each benzo carries a P with two Ph."""
-    _pphos_phenyls(sc, c)
+    psub(sc, c)
     cu_b = (1.0, 1.72)
     cd_b = (1.0, -1.72)
     # CONNECTIVITY: DPEphos = (2-Ph2P-phenyl)2O, so on each ring P is ORTHO to
@@ -277,6 +290,19 @@ def _dpephos_backbone(sc, c):
     oid = sc.atom((o_mid[0] - 0.15 * L, o_mid[1]), label="O", color=O_COL)
     sc.bond(up_Oc, oid, order=1)
     sc.bond(dn_Oc, oid, order=1)
+    return sc
+
+
+def _dppbz_backbone(sc, c, psub=_pphos_phenyls):
+    """DPPBz = 1,2-bis(phosphino)benzene: a single benzene with the two P donors
+    on ADJACENT (ortho) carbons, both pointing at the metal pocket."""
+    psub(sc, c)
+    cen = (1.6, 0.0)
+    # vertices 30,90,150,210,270,330 -> ring[0]@30 (upper-right) and
+    # ring[5]@330 (lower-right) are the two ortho P-bearing carbons.
+    ring = place_hexagon(sc, cen, 30, kek_offset=0)
+    sc.bond(c["pu"], ring[0], order=1)
+    sc.bond(c["pd"], ring[5], order=1)
     return sc
 
 
@@ -296,6 +322,49 @@ def build_dpephos():
     pd = (3.1, -1.45)
     c = core(sc, cu, pu, pd)
     return _dpephos_backbone(sc, c), "(DPEphos)Cu–H"
+
+
+# --- DTBM-substituted analogues + DPPBz (same backbones, DTBM aryls on P) ----
+# the xanthene / diaryl-ether backbones are bulky on the LEFT, so both DTBM aryls
+# on each P must fan into the open RIGHT/UP space (not back over the backbone).
+def _dtbm_right(sc, c):
+    _pphos_dtbm(sc, c, dirs=(25, 105))
+
+
+def build_dtbm_xantphos():
+    sc = Scene()
+    cu = (6.8, 0.0)
+    pu = (4.6, 1.7)
+    pd = (4.6, -1.7)
+    c = core(sc, cu, pu, pd)
+    return _xanthene_backbone(sc, c, _dtbm_right), "(DTBM-Xantphos)Cu–H"
+
+
+def build_dtbm_dpephos():
+    sc = Scene()
+    cu = (6.2, 0.0)
+    pu = (4.0, 1.6)
+    pd = (4.0, -1.6)
+    c = core(sc, cu, pu, pd)
+    return _dpephos_backbone(sc, c, _dtbm_right), "(DTBM-DPEphos)Cu–H"
+
+
+def build_dppbz():
+    sc = Scene()
+    cu = (5.0, 0.0)
+    pu = (3.1, 1.1)
+    pd = (3.1, -1.1)
+    c = core(sc, cu, pu, pd)
+    return _dppbz_backbone(sc, c), "(DPPBz)Cu–H"
+
+
+def build_dtbm_dppbz():
+    sc = Scene()
+    cu = (6.2, 0.0)
+    pu = (4.0, 1.35)
+    pd = (4.0, -1.35)
+    c = core(sc, cu, pu, pd)
+    return _dppbz_backbone(sc, c, _pphos_dtbm), "(DTBM-DPPBz)Cu–H"
 
 
 # ==============================================================================
@@ -347,6 +416,10 @@ BUILDERS = {
     "xantphos": build_xantphos,
     "dpephos": build_dpephos,
     "ph_bpe": build_ph_bpe,
+    "dtbm_xantphos": build_dtbm_xantphos,
+    "dtbm_dpephos": build_dtbm_dpephos,
+    "dppbz": build_dppbz,
+    "dtbm_dppbz": build_dtbm_dppbz,
 }
 
 
