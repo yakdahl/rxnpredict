@@ -1,0 +1,1 @@
+"""metaldepict source package."""

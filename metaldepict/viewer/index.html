@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>metaldepict — adjustable 2D depiction of metal–organic complexes</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="title">metaldepict</h1>
+    <span class="formula" id="formula"></span>
+    <span class="geom" id="geom"></span>
+    <span class="formula" id="method"></span>
+  </header>
+
+  <div class="controls">
+    <div class="group">
+      <label class="title">abbrev.</label>
+      <button data-level="full">full</button>
+      <button data-level="l1" class="active">t-Bu / OMe</button>
+      <button data-level="l2">DTBM aryls</button>
+    </div>
+
+    <div class="group">
+      <label class="title">physics</label>
+      <button id="btn-play" class="active">▶ run</button>
+      <button id="btn-relax">relax 300×</button>
+      <label class="chk"><input type="checkbox" id="chk-sym"> enforce C₂</label>
+    </div>
+
+    <div class="group">
+      <label class="title">show</label>
+      <label class="chk"><input type="checkbox" id="chk-wedge" checked> wedges</label>
+      <label class="chk"><input type="checkbox" id="chk-charge" checked> charges</label>
+      <label class="chk"><input type="checkbox" id="chk-carbonH"> all H</label>
+    </div>
+
+    <div class="group">
+      <label class="title">spread</label>
+      <input type="range" id="rng-rep" min="0" max="100" value="45">
+    </div>
+
+    <div class="group">
+      <button id="btn-fit">fit</button>
+      <button id="btn-reset">reset layout</button>
+      <button id="btn-svg">export SVG</button>
+      <button id="btn-json">export JSON</button>
+    </div>
+  </div>
+
+  <div id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="legend" id="legend"></div>
+    <div class="hint">drag atoms/groups to adjust · double-click to pin/unpin · scroll to zoom · drag background to pan</div>
+  </div>
+</div>
+
+<script src="molecule_data.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

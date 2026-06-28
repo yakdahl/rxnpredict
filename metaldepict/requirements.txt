@@ -1,0 +1,12 @@
+# metaldepict dependencies
+# T-REX (transition-metal-complex descriptor / canonical string / chirality).
+# It pins a compatible RDKit (==2025.3.5) and pulls numpy/networkx.
+trex-notation>=0.1.0
+numpy>=1.23
+
+# RDKit is required (installed transitively by trex-notation); listed for clarity.
+rdkit
+
+# Optional, NOT pip-installable in general (needs a conda env with xtb + openbabel):
+#   conda install -c conda-forge architector
+# When importable, build_complex.py uses it for the GFN2-xTB conformer.
