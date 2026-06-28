@@ -318,6 +318,21 @@
     relaxBoost = 1.0;
   }
 
+  // rotate the whole assembly so the Cu-H bond is horizontal with H to the right
+  function alignCuH() {
+    if (metalId == null || hydrideId == null) return;
+    const cu = atom.get(metalId), h = atom.get(hydrideId);
+    if (!cu || !h) return;
+    const hx = h.x - cu.x, hy = h.y - cu.y;
+    if (Math.hypot(hx, hy) < 1e-6) return;
+    const ang = -Math.atan2(hy, hx), c = Math.cos(ang), s = Math.sin(ang);
+    const px = cu.x, py = cu.y;
+    const rot = p => { const dx = p.x - px, dy = p.y - py;
+      p.x = px + dx * c - dy * s; p.y = py + dx * s + dy * c; };
+    atom.forEach(rot); sup.forEach(rot);
+    buildView();   // rebuild rigid bodies from the rotated coordinates
+  }
+
   // ---------------------------------------------------------------- view xform
   let scale = 40, tx = 0, ty = 0;
   function W() { return svg.clientWidth || 900; }
@@ -364,12 +379,28 @@
     // bold ~0.13, atom font ~0.55, label gap ~0.32). ----
     const BL = L0 * scale;
     curBL = BL;
-    const SW = Math.max(1.0, 0.045 * BL);
-    const BOLDW = Math.max(2.6, 0.13 * BL);
-    const DGAP = 0.16 * BL;
+    const SW = Math.max(1.6, 0.075 * BL);      // thicker bonds
+    const BOLDW = Math.max(3.4, 0.17 * BL);
+    const DGAP = 0.18 * BL;
     const FONT = Math.max(9, 0.55 * BL);
     const SFONT = Math.max(9, 0.48 * BL);
-    curHalo = Math.max(2.5, 0.11 * BL);
+    curHalo = Math.max(2.5, 0.12 * BL);
+
+    // inside direction (toward ring interior) for each ring bond, for ChemDraw
+    // double bonds drawn on the inside of the ring
+    const ringInside = new Map();
+    (M.rings || []).forEach(ring => {
+      const pts = ring.map(id => atom.get(id));
+      if (pts.some(p => !p)) return;
+      let cx = 0, cy = 0; pts.forEach(p => { cx += p.x; cy += p.y; }); cx /= pts.length; cy /= pts.length;
+      for (let k = 0; k < ring.length; k++) {
+        const a = ring[k], b = ring[(k + 1) % ring.length];
+        const pa = atom.get(a), pb = atom.get(b);
+        let ix = cx - (pa.x + pb.x) / 2, iy = cy - (pa.y + pb.y) / 2;
+        const il = Math.hypot(ix, iy) || 1;
+        ringInside.set(a < b ? a + "|" + b : b + "|" + a, { x: ix / il, y: iy / il });
+      }
+    });
 
     // ---- bonds ----
     view.edges.forEach(e => {
@@ -415,18 +446,17 @@
       const stroke = "#1a1d22", sw = e.axis ? BOLDW : SW;   // bold = biaryl axis
       const drawLine = (ox, oy) => el("line", { x1: x1 + ox, y1: y1 + oy, x2: x2 + ox, y2: y2 + oy,
         stroke, "stroke-width": sw, "stroke-linecap": "butt" }, gBonds);
-      if (e.order === 2) {
-        // ChemDraw double bond: full line + an inset shorter parallel line
+      // pick the perpendicular pointing to the ring interior (double bond inside)
+      let ox = px, oy = py;
+      const ins = (e.na.id != null && e.nb.id != null)
+        ? ringInside.get(e.na.id < e.nb.id ? e.na.id + "|" + e.nb.id : e.nb.id + "|" + e.na.id)
+        : null;
+      if (ins) { const isx = ins.x, isy = -ins.y; if (px * isx + py * isy < 0) { ox = -px; oy = -py; } }
+      if (e.order === 2 || e.order === 1.5 || e.type === "aromatic") {
         drawLine(0, 0);
-        const o = DGAP, s = 0.16;
-        el("line", { x1: x1 + px * o + ux * L * s, y1: y1 + py * o + uy * L * s,
-          x2: x2 + px * o - ux * L * s, y2: y2 + py * o - uy * L * s,
-          stroke, "stroke-width": SW, "stroke-linecap": "butt" }, gBonds);
-      } else if (e.order === 1.5 || e.type === "aromatic") {
-        drawLine(0, 0);
-        const o = DGAP, s = 0.16;
-        el("line", { x1: x1 + px * o + ux * L * s, y1: y1 + py * o + uy * L * s,
-          x2: x2 + px * o - ux * L * s, y2: y2 + py * o - uy * L * s,
+        const o = DGAP, s = 0.14;
+        el("line", { x1: x1 + ox * o + ux * L * s, y1: y1 + oy * o + uy * L * s,
+          x2: x2 + ox * o - ux * L * s, y2: y2 + oy * o - uy * L * s,
           stroke, "stroke-width": SW, "stroke-linecap": "butt" }, gBonds);
       } else {
         drawLine(0, 0);
@@ -455,9 +485,9 @@
         haloText(gAtoms, X, Y, (n.id === hydrideId) ? "H" : el_, FONT, 700, COLORS[el_] || "#23262b");
         glyphR = 0.16 * BL;
       }
-      // charges as full +/- symbols (offset by the fixed visible glyph radius)
-      if (showCharge) {
-        const q = (n.data.charge !== 0) ? n.data.charge : (n.data.charge_ionic || 0);
+      // formal charges only, and never on the metal or hydride (dative drawing)
+      if (showCharge && n.id !== metalId && n.id !== hydrideId) {
+        const q = n.data.charge || 0;
         if (q) drawCharge(gAtoms, X, Y, glyphR, q);
       }
     });
@@ -576,7 +606,7 @@
       document.querySelectorAll("[data-level]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       LEVEL = btn.getAttribute("data-level");
-      buildView(); relax(90, true); fit(); render();
+      buildView(); relax(90, true); alignCuH(); fit(); render();
     });
   });
   const playBtn = document.getElementById("btn-play");
@@ -585,7 +615,7 @@
     playBtn.textContent = running ? "▶ run" : "❚❚ paused";
     if (!running) render();
   });
-  document.getElementById("btn-relax").addEventListener("click", () => { relax(300, true); render(); });
+  document.getElementById("btn-relax").addEventListener("click", () => { relax(300, true); alignCuH(); render(); });
   document.getElementById("chk-sym").addEventListener("change", e => { enforceSym = e.target.checked; });
   document.getElementById("chk-wedge").addEventListener("change", e => { showWedge = e.target.checked; render(); });
   document.getElementById("chk-charge").addEventListener("change", e => { showCharge = e.target.checked; render(); });
@@ -595,7 +625,7 @@
   document.getElementById("btn-reset").addEventListener("click", () => {
     M.atoms.forEach(a => { const p = atom.get(a.id); p.x = a.x; p.y = a.y; p.vx = p.vy = 0; p.pinned = false; });
     sup.forEach(s => s.pinned = false);
-    buildView(); relax(90, true); fit(); render();   // relax like the initial load
+    buildView(); relax(90, true); alignCuH(); fit(); render();   // relax like the initial load
   });
   document.getElementById("btn-svg").addEventListener("click", () => {
     const w = W(), h = H();
@@ -617,13 +647,13 @@
   window.addEventListener("resize", () => { fit(); render(); });
 
   // ---------------------------------------------------------------- go
-  buildView(); relax(110, true); fit(); legend(); render();
+  buildView(); relax(110, true); alignCuH(); fit(); legend(); render();
   requestAnimationFrame(frame);
 
   // expose for headless testing / screenshots
   window.__metaldepict = {
-    relax: (n) => { relax(n || 200, true); render(); },
-    setLevel: (lv) => { LEVEL = lv; buildView(); relax(90, true); fit(); render(); },
+    relax: (n) => { relax(n || 200, true); alignCuH(); render(); },
+    setLevel: (lv) => { LEVEL = lv; buildView(); relax(90, true); alignCuH(); fit(); render(); },
     fit: () => { fit(); render(); },
     overlapScore, metrics, view: () => view, stop: () => { running = false; }
   };

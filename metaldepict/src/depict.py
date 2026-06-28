@@ -247,7 +247,7 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
     cg = Chem.Mol(mol)
     cg.RemoveAllConformers()
     try:
-        rdCoordGen.AddCoords(cg)
+        rdCoordGen.AddCoords(cg)                       # clean layout (no stereo bias)
     except Exception:
         from rdkit.Chem import AllChem
         AllChem.Compute2DCoords(cg)
@@ -259,6 +259,26 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
     cu_xy = np.array(coords[metal])
 
     depth = _pca_depth(mol)
+
+    # ---- wedge/dash from RDKit on real (sp3) stereocentres ----
+    # Assign stereo from the 3D conformer AFTER the 2D layout, then copy the
+    # chiral tags onto the (already laid-out) 2D copy and wedge there -- so the
+    # layout itself is never perturbed by stereo perception.
+    wedge_map: dict[tuple[int, int], str] = {}
+    try:
+        Chem.AssignStereochemistryFrom3D(mol)
+        for am, ac in zip(mol.GetAtoms(), cg.GetAtoms()):
+            ac.SetChiralTag(am.GetChiralTag())
+        Chem.AssignStereochemistry(cg, cleanIt=True, force=True)
+        Chem.WedgeMolBonds(cg, cg.GetConformer())
+        for b in cg.GetBonds():
+            d = b.GetBondDir()
+            if d == Chem.BondDir.BEGINWEDGE:
+                wedge_map[(b.GetBeginAtomIdx(), b.GetEndAtomIdx())] = "up"
+            elif d == Chem.BondDir.BEGINDASH:
+                wedge_map[(b.GetBeginAtomIdx(), b.GetEndAtomIdx())] = "down"
+    except Exception:
+        pass
 
     # ---- symmetry: canonical-rank equivalence classes ----
     ranks = list(Chem.CanonicalRankAtoms(mol, breakTies=False))
@@ -352,9 +372,14 @@ def build_depiction(complex_mol: Chem.Mol, info: dict, trex_desc: dict,
         ai, bi = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
         btype, order = _bond_type(b)
         is_axis = bool(biaryl) and {ai, bi} == biaryl_set
+        wedge, a0 = "none", ai
+        if (ai, bi) in wedge_map:
+            wedge, a0 = wedge_map[(ai, bi)], ai
+        elif (bi, ai) in wedge_map:
+            wedge, a0 = wedge_map[(bi, ai)], bi
         bonds.append({
-            "a": ai, "b": bi, "a0": ai, "order": order, "type": btype,
-            "wedge": "none", "axis": is_axis,
+            "a": ai, "b": bi, "a0": a0, "order": order, "type": btype,
+            "wedge": wedge, "axis": is_axis,
         })
 
     return {

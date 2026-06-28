@@ -64,7 +64,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 2,
-      "sym_class": 25,
+      "sym_class": 26,
       "role": "backbone",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -368,7 +368,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 0,
-      "sym_class": 36,
+      "sym_class": 37,
       "role": "donor",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -384,7 +384,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 1,
-      "sym_class": 31,
+      "sym_class": 33,
       "role": "backbone",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -400,7 +400,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 0,
-      "sym_class": 27,
+      "sym_class": 29,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -416,7 +416,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 13,
+      "sym_class": 17,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -432,7 +432,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 5,
+      "sym_class": 9,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -448,7 +448,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 1,
+      "sym_class": 3,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -464,7 +464,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 5,
+      "sym_class": 9,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -480,7 +480,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 13,
+      "sym_class": 17,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g3_ph",
@@ -496,7 +496,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 2,
-      "sym_class": 21,
+      "sym_class": 23,
       "role": "backbone",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -512,7 +512,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 2,
-      "sym_class": 21,
+      "sym_class": 23,
       "role": "backbone",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -528,7 +528,7 @@
       "charge_ionic": 0,
       "aromatic": false,
       "nH": 1,
-      "sym_class": 31,
+      "sym_class": 33,
       "role": "backbone",
       "angle_deg": 109.5,
       "group_l1": null,
@@ -544,7 +544,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 0,
-      "sym_class": 27,
+      "sym_class": 29,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -560,7 +560,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 13,
+      "sym_class": 17,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -576,7 +576,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 5,
+      "sym_class": 9,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -592,7 +592,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 1,
+      "sym_class": 3,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -608,7 +608,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 5,
+      "sym_class": 9,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -624,7 +624,7 @@
       "charge_ionic": 0,
       "aromatic": true,
       "nH": 1,
-      "sym_class": 13,
+      "sym_class": 17,
       "role": "backbone",
       "angle_deg": 120.0,
       "group_l1": "g4_ph",
@@ -697,7 +697,7 @@
       "a0": 3,
       "order": 1.0,
       "type": "single",
-      "wedge": "none",
+      "wedge": "down",
       "axis": false
     },
     {
@@ -778,7 +778,7 @@
       "a0": 12,
       "order": 1.0,
       "type": "single",
-      "wedge": "none",
+      "wedge": "up",
       "axis": false
     },
     {
@@ -850,7 +850,7 @@
       "a0": 20,
       "order": 1.0,
       "type": "single",
-      "wedge": "none",
+      "wedge": "down",
       "axis": false
     },
     {
@@ -931,7 +931,7 @@
       "a0": 29,
       "order": 1.0,
       "type": "single",
-      "wedge": "none",
+      "wedge": "up",
       "axis": false
     },
     {
@@ -1179,66 +1179,94 @@
   "symmetry": {
     "classes": [
       [
-        0,
-        1
-      ],
-      [
-        2,
-        19
-      ],
-      [
         3,
-        12,
-        20,
-        29
+        12
       ],
       [
         4,
-        13,
-        21,
-        30
+        13
       ],
       [
         5,
         9,
         14,
-        18,
+        18
+      ],
+      [
+        6,
+        8,
+        15,
+        17
+      ],
+      [
+        7,
+        16
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        20,
+        29
+      ],
+      [
+        21,
+        30
+      ],
+      [
         22,
         26,
         31,
         35
       ],
       [
-        6,
-        8,
-        15,
-        17,
         23,
         25,
         32,
         34
       ],
       [
-        7,
-        16,
         24,
         33
       ],
       [
-        10,
-        11,
         27,
         28
       ]
     ],
     "mirror_pairs": [
       [
-        0,
-        1
+        3,
+        12
       ],
       [
-        2,
-        19
+        4,
+        13
+      ],
+      [
+        7,
+        16
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        20,
+        29
+      ],
+      [
+        21,
+        30
+      ],
+      [
+        24,
+        33
+      ],
+      [
+        27,
+        28
       ]
     ],
     "axis": {
