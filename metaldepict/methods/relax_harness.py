@@ -66,11 +66,26 @@ def _ang(p, q, r):
 class Harness:
     """Loads one ligand's Method-C seed and derives everything a relaxer needs."""
 
-    def __init__(self, key):
-        self.key = key
-        sc, title = M.BUILDERS[key]()
+    def __init__(self, key=None, scene=None, title=None,
+                 exempt=None, extra_rigid=None):
+        # Two seed sources: a named hardcoded template (key -> M.BUILDERS[key]())
+        # or any pre-built Scene (e.g. generated from a SMILES). The rest of the
+        # harness -- ring/body detection, joints, angles, overlaps, metrics --
+        # is derived purely from the Scene, so the physics is fully dynamic.
+        # exempt:      atom-id set whose MUTUAL overlaps are ignored (e.g. the
+        #              ferrocene sandwich, which is intentionally close-packed).
+        # extra_rigid: list of atom-id sets to FREEZE into one rigid body each
+        #              (e.g. a metallocene, whose Cp rings + Fe must move as one).
+        if scene is not None:
+            sc = scene
+            title = title or "molecule"
+        else:
+            sc, title = M.BUILDERS[key]()
+        self.key = key or "custom"
         self.scene = sc
         self.title = title
+        self._exempt = set(exempt) if exempt else set()
+        self._extra_rigid = [set(g) for g in (extra_rigid or [])]
         self.pos = {i: (float(a.pos[0]), float(a.pos[1]))
                     for i, a in sc.atoms.items()}
         self.label = {i: a.label for i, a in sc.atoms.items()}
@@ -162,8 +177,10 @@ class Harness:
         return [set(r) for r in rings]
 
     def _build_bodies(self):
-        """Fuse rings sharing an atom into rigid bodies; lone atoms are 1-bodies."""
-        groups = [set(r) for r in self.rings]
+        """Fuse rings sharing an atom into rigid bodies; lone atoms are 1-bodies.
+        Forced `extra_rigid` groups (e.g. a ferrocene sandwich) join the fusion so
+        their rings + bridging metal move as one rigid unit."""
+        groups = [set(r) for r in self.rings] + [set(g) for g in self._extra_rigid]
         merged = True
         while merged:
             merged = False
@@ -248,6 +265,8 @@ class Harness:
                     continue
                 if self.body_of[a] == self.body_of[b]:
                     continue
+                if a in self._exempt and b in self._exempt:
+                    continue                    # intra-fragment (e.g. ferrocene)
                 la, lb = self.label[a], self.label[b]
                 if la and lb:
                     mn = 0.62 * L + 0.10 * L * (len(la) + len(lb))
