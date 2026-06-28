@@ -141,18 +141,28 @@ def build_dtbm_segphos():
 
 
 def _dioxole(sc, ring_ids, center, edge):
+    """Fuse a methylenedioxy O-CH2-O ring as a REGULAR pentagon (every edge = L)
+    onto the benzo edge a-b, on the side away from `center`.  Ring order around
+    the pentagon is  a - O1 - CH2 - O2 - b - a  (a-b is the shared benzo edge)."""
     a, b = ring_ids[edge[0]], ring_ids[edge[1]]
     pa = sc.atoms[a].pos
     pb = sc.atoms[b].pos
     mid = vscale(vadd(pa, pb), 0.5)
     out = vnorm(vsub(mid, center))
-    o1 = sc.atom(vadd(pa, vscale(out, 0.85 * L)), label="O", color=O_COL)
-    o2 = sc.atom(vadd(pb, vscale(out, 0.85 * L)), label="O", color=O_COL)
-    ch2 = sc.atom(vadd(mid, vscale(out, 1.45 * L)))
+    R = L / (2 * math.sin(math.pi / 5))        # circumradius for edge length L
+    apo = R * math.cos(math.pi / 5)            # apothem
+    pc = vadd(mid, vscale(out, apo))           # pentagon centre on the outer side
+    ang_a = math.degrees(math.atan2(pa[1] - pc[1], pa[0] - pc[0]))
+    ang_b = math.degrees(math.atan2(pb[1] - pc[1], pb[0] - pc[0]))
+    diff = ((ang_b - ang_a + 180) % 360) - 180
+    s = 1.0 if diff < 0 else -1.0              # CCW/CW so that vertex#4 == b
+    o1 = sc.atom(polar(pc, ang_a + s * 72.0, R), label="O", color=O_COL)
+    ch2 = sc.atom(polar(pc, ang_a + s * 144.0, R))
+    o2 = sc.atom(polar(pc, ang_a + s * 216.0, R), label="O", color=O_COL)
     sc.bond(a, o1, order=1)
-    sc.bond(b, o2, order=1)
     sc.bond(o1, ch2, order=1)
-    sc.bond(o2, ch2, order=1)
+    sc.bond(ch2, o2, order=1)
+    sc.bond(o2, b, order=1)
 
 
 # ==============================================================================

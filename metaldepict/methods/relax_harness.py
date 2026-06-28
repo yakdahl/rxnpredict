@@ -298,8 +298,23 @@ class Harness:
 
     # ----------------------------------------------------------------- output --
     def commit(self):
+        # recompute every ring's CURRENT centroid so Kekule double bonds are
+        # re-pointed to the inside of their ring -- the 'inside' coordinate baked
+        # in at template time goes stale once rigid bodies translate/rotate, which
+        # would flip doubles to the outside.
+        ring_cent = []
+        for r in self.rings:
+            xs = [self.pos[i][0] for i in r]
+            ys = [self.pos[i][1] for i in r]
+            ring_cent.append((r, (sum(xs) / len(xs), sum(ys) / len(ys))))
         for i, p in self.pos.items():
             self.scene.atoms[i].pos = p
+        for bd in self.scene.bonds:
+            if bd.order == 2 and bd.inside is not None:
+                for (r, c) in ring_cent:
+                    if bd.a in r and bd.b in r:
+                        bd.inside = c
+                        break
 
     def to_svg(self, width=760, height=640):
         self.commit()
