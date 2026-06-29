@@ -210,10 +210,10 @@ _PEN_R = L / (2 * math.sin(math.pi / 5))
 _APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
-def _cp_ring(sc, center, apex_deg, squash=1.0, kek=(2, 1, 2, 1, 1)):
-    """Cyclopentadienyl pentagon, apex vertex at `apex_deg`, optionally squashed
-    vertically by `squash` (<1) to give the tilted-disc perspective of a drawn
-    ferrocene.  `apex_deg` is the in-place rotation knob for the ring."""
+def _cp_ring(sc, center, apex_deg, squash=1.0):
+    """Cyclopentadienyl ring drawn the REFERENCE way: a flattened pentagon
+    OUTLINE (single edges, no Kekule doubles) with an inscribed aromatic circle.
+    `apex_deg` rotates the ring in place; `squash` (<1) tilts it into a disc."""
     cx, cy = center
     ids = []
     for k in range(5):
@@ -221,24 +221,24 @@ def _cp_ring(sc, center, apex_deg, squash=1.0, kek=(2, 1, 2, 1, 1)):
         ids.append(sc.atom((cx + _PEN_R * math.cos(a),
                             cy + _PEN_R * math.sin(a) * squash)))
     for k in range(5):
-        sc.bond(ids[k], ids[(k + 1) % 5], order=kek[k], inside=center)
+        sc.bond(ids[k], ids[(k + 1) % 5], order=1)       # outline only
+    sc.ring_circle(ids, r_frac=0.62)                     # aromatic circle
     return ids
 
 
-def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.15, squash=0.62):
-    """Reference-style vertical SANDWICH: two Cp rings drawn as flattened
-    pentagons (apex pointing TOWARD Fe, flat edge away) in perspective, Fe
-    labelled in the centre on a vertical stacking axis, with eta5 spokes from Fe
-    to the three near carbons of each ring.  Returns (fe, upper_ids, lower_ids)."""
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.15, squash=0.55):
+    """Reference-style vertical SANDWICH: two Cp discs (apex toward Fe, flat edge
+    away) each with an inscribed circle, Fe labelled in the centre, and the eta5
+    drawn as SOLID WEDGES from Fe to the near carbon of each ring -- no explicit
+    Fe-C bonds.  Returns (fe, upper_ids, lower_ids)."""
     fx, fy = fe_xy
     up = _cp_ring(sc, (fx, fy + gap), apex_deg=270.0, squash=squash)  # apex down
     dn = _cp_ring(sc, (fx, fy - gap), apex_deg=90.0, squash=squash)   # apex up
     fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
-    for ids in (up, dn):                              # eta5 spokes to near edge
-        near = sorted(ids, key=lambda i: math.hypot(
-            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))[:3]
-        for i in near:
-            sc.bond(fe, i, order=1)
+    for ids in (up, dn):                              # eta5 wedge to the apex C
+        near = min(ids, key=lambda i: math.hypot(
+            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))
+        sc.wedge(fe, near, half_w=0.34)
     return fe, up, dn
 
 
@@ -304,6 +304,19 @@ def _arm(sc, pid, deg, label):
     tid = sc.atom(tip, label=label)
     sc.bond(pid, tid, order=1)
     return tid
+
+
+def _aryl_para(sc, pid, deg, para_label, kek=0):
+    """Place a phenyl ring on P (ipso back at P) carrying a para substituent
+    label (e.g. CF3) -- for ligands whose P-aryls have a single para group."""
+    p = sc.atoms[pid].pos
+    ipso = polar(p, deg, L)
+    center = polar(ipso, deg, _MT.HEX_R)
+    ids = _MT.place_hexagon(sc, center, deg + 180.0, kek)
+    sc.bond(pid, ids[0], order=1)
+    _MT.text_arm(sc, ids[3], _MT.out_angle(sc, center, ids[3]), para_label,
+                 length=1.0, fontscale=0.9)
+    return ids
 
 
 if __name__ == "__main__":

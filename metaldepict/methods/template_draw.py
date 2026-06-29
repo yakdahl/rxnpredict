@@ -84,6 +84,8 @@ class Bond:
 class Scene:
     atoms: dict = field(default_factory=dict)
     bonds: list = field(default_factory=list)
+    ring_circles: list = field(default_factory=list)  # (vertex_ids, r_frac) aromatic circle
+    wedges: list = field(default_factory=list)         # (tip_id, base_id, half_w) eta5 wedge
     _next: int = 0
 
     def atom(self, pos, label="", color="#111", halo=True, fontscale=1.0):
@@ -97,6 +99,17 @@ class Scene:
 
     def bond(self, a, b, order=1, kind="plain", inside=None):
         self.bonds.append(Bond(a, b, order, kind, inside))
+
+    def ring_circle(self, vertex_ids, r_frac=0.62):
+        """An aromatic-ring circle inscribed in the ring of `vertex_ids`; centre
+        and radii are recomputed from CURRENT vertex positions at render time, so
+        it follows the ring (e.g. a ferrocene Cp as it relaxes)."""
+        self.ring_circles.append((list(vertex_ids), r_frac))
+
+    def wedge(self, tip_id, base_id, half_w=0.32):
+        """A solid metallocene-style eta5 wedge: a filled triangle, narrow at
+        `tip_id` (Fe) and `half_w`*L wide at `base_id` (a Cp carbon)."""
+        self.wedges.append((tip_id, base_id, half_w))
 
     def ring(self, center, n, start_deg, r=None, kekule=None):
         """Place an n-gon with edge length == L. start_deg = angle of vertex 0.
@@ -228,6 +241,31 @@ class Scene:
                                f'stroke="{col}" stroke-width="{bw:.2f}"/>')
 
         out.append('</g>')
+
+        # ferrocene eta5 wedges (filled triangles) -- resolved from CURRENT atoms
+        for tip, base, hw in self.wedges:
+            pt = self.atoms[tip].pos
+            pb = self.atoms[base].pos
+            d = vnorm(vsub(pb, pt))
+            pr = perp(d)
+            w = hw * L
+            t = tx(pt)
+            b1 = tx((pb[0] + pr[0] * w, pb[1] + pr[1] * w))
+            b2 = tx((pb[0] - pr[0] * w, pb[1] - pr[1] * w))
+            out.append(f'<polygon points="{t[0]:.2f},{t[1]:.2f} '
+                       f'{b1[0]:.2f},{b1[1]:.2f} {b2[0]:.2f},{b2[1]:.2f}" '
+                       f'fill="#111"/>')
+        # aromatic-ring circles (ellipses matching the ring's drawn shape)
+        for vids, rf in self.ring_circles:
+            xs = [self.atoms[i].pos[0] for i in vids]
+            ys = [self.atoms[i].pos[1] for i in vids]
+            cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+            rx = rf * (max(xs) - min(xs)) / 2.0
+            ry = rf * (max(ys) - min(ys)) / 2.0
+            X, Y = tx((cx, cy))
+            out.append(f'<ellipse cx="{X:.2f}" cy="{Y:.2f}" rx="{rx * scale:.2f}" '
+                       f'ry="{ry * scale:.2f}" fill="none" stroke="#111" '
+                       f'stroke-width="{BOND_W * scale:.2f}"/>')
 
         fs = FONT * scale
         for a in self.atoms.values():
