@@ -32,10 +32,10 @@ CANVAS, SCALE, ANCHOR = (1180, 980), 44.0, (740.0, 490.0)
 _CACHE = {}
 
 
-def _smiles_H(smi, name):
+def _smiles_H(smi, name, p_tetra=False):
     def fresh():
         sc, _ = S.scene_from_smiles(smi, name)
-        return R.Harness(scene=sc, title=name)
+        return R.Harness(scene=sc, title=name, p_tetra=p_tetra)
     H, _ = G.best_relax(fresh, key=f"named::{name}", cache=_CACHE)
     return H
 
@@ -181,10 +181,10 @@ def named():
         "DTBM-DPPBz")
     out["DTBM-DPEPhos"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["dpephos"], G.SUBSTITUENTS["dtbm"]),
-        "DTBM-DPEPhos")
+        "DTBM-DPEPhos", p_tetra=True)
     out["DTBM-Xantphos"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["xantphos"], G.SUBSTITUENTS["dtbm"]),
-        "DTBM-Xantphos")
+        "DTBM-Xantphos", p_tetra=True)
     out["DM-DPEPhos"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["dpephos"], "c1cc(C)cc(C)c1"), "DM-DPEPhos")
     return out

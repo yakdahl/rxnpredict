@@ -77,7 +77,7 @@ class Harness:
     """Loads one ligand's Method-C seed and derives everything a relaxer needs."""
 
     def __init__(self, key=None, scene=None, title=None,
-                 exempt=None, extra_rigid=None):
+                 exempt=None, extra_rigid=None, p_tetra=False):
         # Two seed sources: a named hardcoded template (key -> M.BUILDERS[key]())
         # or any pre-built Scene (e.g. generated from a SMILES). The rest of the
         # harness -- ring/body detection, joints, angles, overlaps, metrics --
@@ -94,6 +94,7 @@ class Harness:
         self.key = key or "custom"
         self.scene = sc
         self.title = title
+        self.p_tetra = p_tetra                       # 360/n target for 4-bond P
         self._exempt = set(exempt) if exempt else set()
         self._extra_rigid = [set(g) for g in (extra_rigid or [])]
         self.pos = {i: (float(a.pos[0]), float(a.pos[1]))
@@ -264,7 +265,12 @@ class Harness:
             if self.label[j] == "Cu":
                 ideal = 120.0                      # trigonal metal
             elif self.label[j] == "P":
-                ideal = 112.0                      # ~tetrahedral-ish P
+                # 112 deg reads tetrahedral for a 3-bond P, but a 4-bond P (two
+                # substituents + backbone + Cu) can only average 360/4 = 90, so
+                # 112 is unreachable and leaves an uneven fan.  Opt-in per Harness
+                # (p_tetra) to target 360/n there -- a more even fan for the
+                # bulky 4-coordinate cases, applied only where it helps.
+                ideal = 360.0 / n if (self.p_tetra and n >= 4) else 112.0
             else:
                 ideal = 360.0 / n if n >= 3 else 120.0
             # consecutive neighbour pairs only (the drawn wedge between them)
