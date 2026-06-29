@@ -346,16 +346,27 @@ def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.62, squash=0.46):
         fu = (math.cos(math.radians(face)), math.sin(math.radians(face)))
         fp = (-fu[1], fu[0])
         ring_set = set(ring)
-        newpos = {}
-        for k, atom in enumerate(ring):
-            th = math.radians(90.0 + 360.0 * k / n)  # local pentagon, apex up
+
+        def vpos(kk):                                 # vertex position at local slot kk
+            th = math.radians(90.0 + 360.0 * kk / n)
             lx, ly = pen_r * math.cos(th), pen_r * math.sin(th)
-            wx = lx * fp[0] + ly * fu[0]             # apex along `face`
-            wy = lx * fp[1] + ly * fu[1]
-            a = (wx * u[0] + wy * u[1]) * squash     # foreshorten along metal axis
-            b = wx * up[0] + wy * up[1]              # full width across
-            newpos[atom] = (center[0] + a * u[0] + b * up[0],
-                            center[1] + a * u[1] + b * up[1])
+            wx, wy = lx * fp[0] + ly * fu[0], lx * fp[1] + ly * fu[1]
+            a = (wx * u[0] + wy * u[1]) * squash
+            b = wx * up[0] + wy * up[1]
+            return (center[0] + a * u[0] + b * up[0], center[1] + a * u[1] + b * up[1])
+
+        # ROTATE the Cp ring so its bulkiest substituent sits on the vertex
+        # FARTHEST from the metal -- spinning the disc about its 5-fold axis (a
+        # real, coordination-preserving degree of freedom) keeps a big group
+        # (t-Bu, ...) pointing cleanly outward instead of folding into the ring.
+        bulk = [len(_subtree(cx, a, ring_set, metal)) for a in ring]
+        shift = 0
+        if max(bulk) > 0:
+            jmax = max(range(n), key=lambda k: bulk[k])
+            far = max(range(n), key=lambda k: math.hypot(vpos(k)[0] - mx,
+                                                         vpos(k)[1] - my))
+            shift = (far - jmax) % n
+        newpos = {atom: vpos((k + shift) % n) for k, atom in enumerate(ring)}
         for atom in ring:
             pos[atom] = newpos[atom]
         # ring substituents (Cp* methyls, ...) radiate straight OUT from the disc

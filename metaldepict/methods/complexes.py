@@ -462,7 +462,10 @@ def _ring_polys(H):
 def _atoms_inside_rings(H, max_ring=8):
     """Atom ids that sit INSIDE a small ring (< `max_ring`) they are not part of --
     a ligand crammed into a chelate cavity or an aryl/aliphatic ring.  A HARD
-    violation: nothing belongs inside a ring of fewer than 8 members."""
+    violation: nothing belongs inside a ring of fewer than 8 members.  The metal
+    and the frozen eta-n disc atoms (incl. the invisible ring-centroid anchors,
+    which legitimately sit at the ring centre) are exempt."""
+    exempt = set(getattr(H, "_exempt", set())) | {H.metal}
     bad = set()
     for cyc in _ring_polys(H):
         if len(cyc) >= max_ring:                      # large macrocycle -> allowed
@@ -472,7 +475,7 @@ def _atoms_inside_rings(H, max_ring=8):
         if len(poly) < 3:
             continue
         for a in H.ids:
-            if a in ringset or a == H.metal:
+            if a in ringset or a in exempt:
                 continue
             if _point_in_poly(H.pos[a], poly):
                 bad.add(a)
