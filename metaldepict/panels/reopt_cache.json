@@ -30,8 +30,9 @@
   }
  },
  "binap__cyclohexyl": {
-  "crowd": 0.85,
-  "overlap": 0,
+  "crossings": 0,
+  "crowd": 0.5,
+  "overlap": 2,
   "recipe": {
    "declutter": {
     "angles": [
@@ -70,15 +71,16 @@
    "push": true,
    "weights": {
     "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 34.0,
     "w_rigid": 72.0
    }
   }
  },
  "binap__dtbm": {
-  "crowd": 1.05,
+  "crossings": 0,
+  "crowd": 0.97,
   "overlap": 0,
   "recipe": {
    "declutter": {
@@ -99,11 +101,11 @@
     "passes": 3
    },
    "weights": {
-    "maxiter": 93.48262437527085,
-    "w_angle": 0.07041688681863634,
-    "w_bond": 15.43377661127694,
-    "w_overlap": 21.31678206083734,
-    "w_rigid": 44.63669229373058
+    "maxiter": 140.4344154988806,
+    "w_angle": 0.1089746280609758,
+    "w_bond": 11.71997361108311,
+    "w_overlap": 23.738375436444862,
+    "w_rigid": 56.75063674308857
    }
   }
  },
@@ -169,8 +171,9 @@
   }
  },
  "binap__octylthienyl": {
-  "crowd": 0.98,
-  "overlap": 2,
+  "crossings": 0,
+  "crowd": 0.95,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -189,30 +192,12 @@
     ],
     "passes": 3
    },
-   "declutter2": {
-    "angles": [
-     12,
-     -12,
-     24,
-     -24,
-     36,
-     -36,
-     50,
-     -50,
-     68,
-     -68,
-     85,
-     -85
-    ],
-    "passes": 2
-   },
-   "push": true,
    "weights": {
-    "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
-    "w_overlap": 34.0,
-    "w_rigid": 72.0
+    "maxiter": 107.91308009085031,
+    "w_angle": 0.007962502571048358,
+    "w_bond": 3.6738318191990222,
+    "w_overlap": 20.945389620955694,
+    "w_rigid": 51.83803544259797
    }
   }
  },
@@ -295,7 +280,8 @@
   }
  },
  "dpephos__biscf3": {
-  "crowd": 0.77,
+  "crossings": 0,
+  "crowd": 0.52,
   "overlap": 1,
   "recipe": {
    "declutter": {
@@ -336,8 +322,8 @@
    "relief": true,
    "weights": {
     "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 34.0,
     "w_rigid": 72.0
    }
@@ -392,7 +378,8 @@
   }
  },
  "dpephos__dtbm": {
-  "crowd": 1.15,
+  "crossings": 0,
+  "crowd": 0.79,
   "overlap": 2,
   "recipe": {
    "declutter": {
@@ -412,13 +399,31 @@
     ],
     "passes": 3
    },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
    "relief": true,
    "weights": {
-    "maxiter": 116.56299124048628,
-    "w_angle": 0.003518362325060531,
-    "w_bond": 17.762317871363432,
-    "w_overlap": 21.197684621039564,
-    "w_rigid": 43.69270620234414
+    "maxiter": 200,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
    }
   }
  },
@@ -548,8 +553,8 @@
  },
  "dpephos__xylyl": {
   "crossings": 0,
-  "crowd": 0.39,
-  "overlap": 1,
+  "crowd": 0.21,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -568,13 +573,31 @@
     ],
     "passes": 3
    },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
    "relief": true,
    "weights": {
-    "maxiter": 115.65668029354114,
-    "w_angle": 0.003978228002832651,
-    "w_bond": 2.9832716714597938,
-    "w_overlap": 25.25901499876547,
-    "w_rigid": 58.59097616945452
+    "maxiter": 200,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
    }
   }
  },
@@ -1026,7 +1049,8 @@
   }
  },
  "named::(3-octyl-2-thienyl)-DPPBz": {
-  "crowd": 0.51,
+  "crossings": 0,
+  "crowd": 0.49,
   "overlap": 1,
   "recipe": {
    "declutter": {
@@ -1066,8 +1090,8 @@
    "push": true,
    "weights": {
     "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 34.0,
     "w_rigid": 72.0
    }
@@ -1112,8 +1136,59 @@
    }
   }
  },
+ "named::DM-DPEPhos": {
+  "crossings": 0,
+  "crowd": 0.21,
+  "overlap": 0,
+  "recipe": {
+   "declutter": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 3
+   },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
+   "relief": true,
+   "weights": {
+    "maxiter": 200,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
+   }
+  }
+ },
  "named::DM-SEGPHOS": {
-  "crowd": 0.39,
+  "crossings": 0,
+  "crowd": 0.57,
   "overlap": 0,
   "recipe": {
    "declutter": {
@@ -1134,11 +1209,11 @@
     "passes": 3
    },
    "weights": {
-    "maxiter": 133.2195555649386,
-    "w_angle": 0.008406988150783112,
-    "w_bond": 16.49059106968764,
-    "w_overlap": 21.61600207081758,
-    "w_rigid": 56.84027334421924
+    "maxiter": 74.80539715409782,
+    "w_angle": 0.10261288057337348,
+    "w_bond": 15.696091556734311,
+    "w_overlap": 13.252636590521554,
+    "w_rigid": 79.23087755511449
    }
   }
  },
@@ -1173,7 +1248,8 @@
   }
  },
  "named::DTBM-DPEPhos": {
-  "crowd": 1.15,
+  "crossings": 0,
+  "crowd": 0.79,
   "overlap": 2,
   "recipe": {
    "declutter": {
@@ -1193,32 +1269,83 @@
     ],
     "passes": 3
    },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
    "relief": true,
    "weights": {
-    "maxiter": 116.56299124048628,
-    "w_angle": 0.003518362325060531,
-    "w_bond": 17.762317871363432,
-    "w_overlap": 21.197684621039564,
-    "w_rigid": 43.69270620234414
+    "maxiter": 200,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
    }
   }
  },
  "named::DTBM-DPPBz": {
+  "crossings": 0,
   "crowd": 0.03,
   "overlap": 0,
   "recipe": {
    "weights": {
-    "maxiter": 164,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "maxiter": 180,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 17.49,
     "w_rigid": 67.3
    }
   }
  },
  "named::DTBM-SEGPHOS": {
-  "crowd": 0.83,
-  "overlap": 2,
+  "crossings": 0,
+  "crowd": 1.05,
+  "overlap": 0,
+  "recipe": {
+   "declutter": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 3
+   },
+   "weights": {
+    "maxiter": 70.5837475251197,
+    "w_angle": 0.09071418588704683,
+    "w_bond": 9.502620886094407,
+    "w_overlap": 24.528765973463468,
+    "w_rigid": 61.50168035409963
+   }
+  }
+ },
+ "named::DTBM-Xantphos": {
+  "crossings": 0,
+  "crowd": 0.41,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1257,8 +1384,8 @@
    "push": true,
    "weights": {
     "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 34.0,
     "w_rigid": 72.0
    }
@@ -1517,7 +1644,8 @@
   }
  },
  "segphos__cyclohexyl": {
-  "crowd": 0.9,
+  "crossings": 0,
+  "crowd": 0.69,
   "overlap": 1,
   "recipe": {
    "declutter": {
@@ -1557,16 +1685,17 @@
    "push": true,
    "weights": {
     "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
     "w_overlap": 34.0,
     "w_rigid": 72.0
    }
   }
  },
  "segphos__dtbm": {
-  "crowd": 0.83,
-  "overlap": 2,
+  "crossings": 0,
+  "crowd": 1.05,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1585,30 +1714,12 @@
     ],
     "passes": 3
    },
-   "declutter2": {
-    "angles": [
-     12,
-     -12,
-     24,
-     -24,
-     36,
-     -36,
-     50,
-     -50,
-     68,
-     -68,
-     85,
-     -85
-    ],
-    "passes": 2
-   },
-   "push": true,
    "weights": {
-    "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
-    "w_overlap": 34.0,
-    "w_rigid": 72.0
+    "maxiter": 70.5837475251197,
+    "w_angle": 0.09071418588704683,
+    "w_bond": 9.502620886094407,
+    "w_overlap": 24.528765973463468,
+    "w_rigid": 61.50168035409963
    }
   }
  },
@@ -1674,8 +1785,9 @@
   }
  },
  "segphos__octylthienyl": {
-  "crowd": 0.99,
-  "overlap": 1,
+  "crossings": 0,
+  "crowd": 0.93,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1694,30 +1806,12 @@
     ],
     "passes": 3
    },
-   "declutter2": {
-    "angles": [
-     12,
-     -12,
-     24,
-     -24,
-     36,
-     -36,
-     50,
-     -50,
-     68,
-     -68,
-     85,
-     -85
-    ],
-    "passes": 2
-   },
-   "push": true,
    "weights": {
-    "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
-    "w_overlap": 34.0,
-    "w_rigid": 72.0
+    "maxiter": 123.76668580792398,
+    "w_angle": 0.001556178407373654,
+    "w_bond": 2.5146749383268716,
+    "w_overlap": 26.261346518286835,
+    "w_rigid": 51.804134756060975
    }
   }
  },
@@ -1880,8 +1974,9 @@
   }
  },
  "xantphos__dtbm": {
-  "crowd": 0.77,
-  "overlap": 1,
+  "crossings": 0,
+  "crowd": 0.41,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1900,12 +1995,30 @@
     ],
     "passes": 3
    },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
    "weights": {
-    "maxiter": 90.0211906875615,
-    "w_angle": 3.4126339284057745,
-    "w_bond": 1.008402883371181,
-    "w_overlap": 1.3070476503550825,
-    "w_rigid": 13.146238300748259
+    "maxiter": 200,
+    "w_angle": 1.9,
+    "w_bond": 6.0,
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
    }
   }
  },

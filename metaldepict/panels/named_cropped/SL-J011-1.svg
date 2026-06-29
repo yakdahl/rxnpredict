@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="980" viewBox="0 0 1180 980">
+<rect width="1180" height="980" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-linejoin="round">
+<line x1="762.00" y1="490.00" x2="775.64" y2="490.00" stroke="#111" stroke-width="3.96"/>
+<line x1="569.41" y1="439.96" x2="612.85" y2="451.97" stroke="#111" stroke-width="7.52"/>
+<polygon points="560.88,412.44 565.77,440.82 573.05,439.10 564.73,411.53" fill="#111"/>
+<polygon points="629.04,428.75 609.94,449.62 615.76,454.32 632.12,431.23" fill="#111"/>
+<line x1="601.38" y1="406.25" x2="562.80" y2="411.98" stroke="#111" stroke-width="3.96"/>
+<line x1="630.58" y1="429.99" x2="601.38" y2="406.25" stroke="#111" stroke-width="3.96"/>
+<line x1="540.59" y1="546.00" x2="582.90" y2="557.52" stroke="#111" stroke-width="7.52"/>
+<polygon points="531.91,518.57 536.95,546.88 544.22,545.12 535.76,517.64" fill="#111"/>
+<polygon points="601.21,535.44 580.19,554.94 585.61,560.10 604.08,538.18" fill="#111"/>
+<line x1="572.16" y1="512.47" x2="533.84" y2="518.10" stroke="#111" stroke-width="3.96"/>
+<line x1="602.64" y1="536.81" x2="572.16" y2="512.47" stroke="#111" stroke-width="3.96"/>
+<line x1="586.60" y1="459.86" x2="595.30" y2="428.12" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="575.04" y1="502.31" x2="566.43" y2="534.18" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="612.85" y1="451.97" x2="649.75" y2="524.87" stroke="#111" stroke-width="3.96"/>
+<line x1="669.47" y1="530.73" x2="720.95" y2="501.00" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="606.89" y1="602.09" x2="562.84" y2="600.85" stroke="#111" stroke-width="3.96"/>
+<line x1="598.99" y1="609.13" x2="570.33" y2="608.32" stroke="#111" stroke-width="3.96"/>
+<line x1="562.84" y1="600.85" x2="539.70" y2="638.41" stroke="#111" stroke-width="3.96"/>
+<line x1="539.70" y1="638.41" x2="560.51" y2="677.05" stroke="#111" stroke-width="3.96"/>
+<line x1="549.74" y1="641.75" x2="563.25" y2="666.83" stroke="#111" stroke-width="3.96"/>
+<line x1="560.51" y1="677.05" x2="604.57" y2="678.38" stroke="#111" stroke-width="3.96"/>
+<line x1="604.57" y1="678.38" x2="627.55" y2="641.02" stroke="#111" stroke-width="3.96"/>
+<line x1="602.42" y1="668.02" x2="617.33" y2="643.77" stroke="#111" stroke-width="3.96"/>
+<line x1="627.55" y1="641.02" x2="606.89" y2="602.09" stroke="#111" stroke-width="3.96"/>
+<line x1="647.33" y1="550.03" x2="606.89" y2="602.09" stroke="#111" stroke-width="3.96"/>
+<line x1="560.51" y1="677.05" x2="552.86" y2="688.63" stroke="#111" stroke-width="3.96"/>
+<line x1="675.23" y1="574.00" x2="648.97" y2="609.37" stroke="#111" stroke-width="3.96"/>
+<line x1="676.47" y1="584.51" x2="659.39" y2="607.52" stroke="#111" stroke-width="3.96"/>
+<line x1="648.97" y1="609.37" x2="666.38" y2="649.74" stroke="#111" stroke-width="3.96"/>
+<line x1="666.38" y1="649.74" x2="710.16" y2="654.79" stroke="#111" stroke-width="3.96"/>
+<line x1="674.86" y1="643.41" x2="703.34" y2="646.69" stroke="#111" stroke-width="3.96"/>
+<line x1="710.16" y1="654.79" x2="736.37" y2="619.47" stroke="#111" stroke-width="3.96"/>
+<line x1="736.37" y1="619.47" x2="718.87" y2="579.02" stroke="#111" stroke-width="3.96"/>
+<line x1="726.65" y1="615.29" x2="715.27" y2="588.96" stroke="#111" stroke-width="3.96"/>
+<line x1="718.87" y1="579.02" x2="675.23" y2="574.00" stroke="#111" stroke-width="3.96"/>
+<line x1="663.45" y1="551.47" x2="675.23" y2="574.00" stroke="#111" stroke-width="3.96"/>
+<line x1="710.16" y1="654.79" x2="715.03" y2="665.82" stroke="#111" stroke-width="3.96"/>
+<line x1="630.58" y1="429.99" x2="686.39" y2="411.48" stroke="#111" stroke-width="3.96"/>
+<polygon points="686.39,411.48 693.77,395.35 681.94,394.31" fill="#111"/>
+<line x1="686.39" y1="411.48" x2="723.96" y2="432.66" stroke="#111" stroke-width="3.96"/>
+<line x1="737.89" y1="454.95" x2="738.68" y2="468.04" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="722.32" y1="437.08" x2="748.12" y2="442.24" stroke="#111" stroke-width="3.96"/>
+<line x1="748.42" y1="430.35" x2="747.95" y2="430.75" stroke="#111" stroke-width="3.96"/>
+</g>
+<ellipse cx="595.40" cy="428.03" rx="21.63" ry="13.18" fill="none" stroke="#111" stroke-width="3.96" transform="rotate(-164.3 595.40 428.03)"/>
+<ellipse cx="566.43" cy="534.18" rx="21.71" ry="13.04" fill="none" stroke="#111" stroke-width="3.96" transform="rotate(-164.6 566.43 534.18)"/>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Cu</text>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#b05a2a">Cu</text>
+<text x="790.60" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">H</text>
+<text x="790.60" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">H</text>
+<text x="580.78" y="481.07" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Fe</text>
+<text x="580.78" y="481.07" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#b05a2a">Fe</text>
+<text x="656.51" y="538.21" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="656.51" y="538.21" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="536.86" y="712.86" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.8" font-weight="600" stroke="#ffffff" stroke-width="6.73" fill="#ffffff">CF3</text>
+<text x="536.86" y="712.86" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.8" font-weight="600" fill="#111">CF3</text>
+<text x="726.76" y="692.39" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.8" font-weight="600" stroke="#ffffff" stroke-width="6.73" fill="#ffffff">CF3</text>
+<text x="726.76" y="692.39" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.8" font-weight="600" fill="#111">CF3</text>
+<text x="690.40" y="365.90" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="17.6" font-weight="600" stroke="#ffffff" stroke-width="5.98" fill="#ffffff">CH₃</text>
+<text x="690.40" y="365.90" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="17.6" font-weight="600" fill="#111">CH₃</text>
+<text x="736.99" y="440.01" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="736.99" y="440.01" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="712.74" y="435.16" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">t-Bu</text>
+<text x="712.74" y="435.16" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">t-Bu</text>
+<text x="775.49" y="407.45" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">t-Bu</text>
+<text x="775.49" y="407.45" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">t-Bu</text>
+</svg>

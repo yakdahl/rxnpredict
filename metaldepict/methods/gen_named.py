@@ -89,13 +89,18 @@ def named():
     out["DTBM-DPEPhos"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["dpephos"], G.SUBSTITUENTS["dtbm"]),
         "DTBM-DPEPhos")
+    out["DTBM-Xantphos"] = _smiles_H(
+        G.ligand_smiles(G.BACKBONES["xantphos"], G.SUBSTITUENTS["dtbm"]),
+        "DTBM-Xantphos")
+    out["DM-DPEPhos"] = _smiles_H(
+        G.ligand_smiles(G.BACKBONES["dpephos"], "c1cc(C)cc(C)c1"), "DM-DPEPhos")
     return out
 
 
 FIG1 = ["DTBM-SEGPHOS", "(S,S)-Ph-BPE", "DM-SEGPHOS",
         "(S,S)-QuinoxP*", "(R,R)-Me-DuPhos", "SL-J011-1", "DTBM-BINAP"]
 FIG2 = ["(3,5-tBu2C6H3)-DPPBz", "(3-Oct-thienyl)-DPPBz",
-        "DTBM-DPPBz", "DTBM-DPEPhos"]
+        "DTBM-DPPBz", "DTBM-DPEPhos", "DTBM-Xantphos", "DM-DPEPhos"]
 
 
 def main():
@@ -119,7 +124,41 @@ def main():
     R._svg_to_png(svgs, pngs)
     _montage([label[n] for n in FIG1], 4, HERE.parent / "panels" / "named_fig1.png")
     _montage([label[n] for n in FIG2], 2, HERE.parent / "panels" / "named_fig2.png")
+    # one SEPARATE, whitespace-cropped PNG per ligand (the requested deliverable):
+    # render each WITHOUT the title so the crop hugs the molecule, no title gap.
+    cropdir = HERE.parent / "panels" / "named_cropped"
+    cropdir.mkdir(parents=True, exist_ok=True)
+    csvgs, cpngs = [], []
+    for nm, H in Hs.items():
+        H.commit()
+        svg = H.scene.render_svg(*CANVAS, title=None, fixed_scale=SCALE,
+                                 anchor_world=H.pos[H.metal], anchor_px=ANCHOR)
+        sp = cropdir / f"{nm}.svg"
+        sp.write_text(svg)
+        csvgs.append(str(sp))
+        cpngs.append(str(cropdir / f"{nm}.png"))
+    R._svg_to_png(csvgs, cpngs)
+    for p in cpngs:
+        _crop(p, p)
+    print(f"cropped per-ligand PNGs -> {cropdir}")
     print("done")
+
+
+def _crop(src, dest, border=28):
+    """Crop the rendered PNG to its ink bounding box (+ a small uniform border),
+    so each per-ligand image has minimal surrounding whitespace."""
+    from PIL import Image, ImageChops
+    im = Image.open(src).convert("RGB")
+    bg = Image.new("RGB", im.size, "white")
+    bb = ImageChops.difference(im, bg).getbbox()
+    if bb:
+        x0, y0, x1, y1 = bb
+        x0 = max(0, x0 - border)
+        y0 = max(0, y0 - border)
+        x1 = min(im.width, x1 + border)
+        y1 = min(im.height, y1 + border)
+        im = im.crop((x0, y0, x1, y1))
+    im.save(dest)
 
 
 def _montage(pngs, cols, dest):

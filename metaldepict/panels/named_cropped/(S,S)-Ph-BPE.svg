@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="980" viewBox="0 0 1180 980">
+<rect width="1180" height="980" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-linejoin="round">
+<line x1="674.36" y1="467.75" x2="674.36" y2="512.25" stroke="#111" stroke-width="3.96"/>
+<line x1="674.36" y1="512.25" x2="697.73" y2="529.98" stroke="#111" stroke-width="3.96"/>
+<line x1="723.12" y1="545.54" x2="749.31" y2="558.22" stroke="#111" stroke-width="3.96"/>
+<line x1="752.72" y1="557.41" x2="751.85" y2="555.80" stroke="#111" stroke-width="2.97"/>
+<line x1="756.13" y1="556.60" x2="754.39" y2="553.39" stroke="#111" stroke-width="2.97"/>
+<line x1="759.54" y1="555.79" x2="756.93" y2="550.97" stroke="#111" stroke-width="2.97"/>
+<line x1="762.95" y1="554.99" x2="759.47" y2="548.56" stroke="#111" stroke-width="2.97"/>
+<line x1="766.36" y1="554.18" x2="762.01" y2="546.14" stroke="#111" stroke-width="2.97"/>
+<line x1="769.77" y1="553.37" x2="764.55" y2="543.73" stroke="#111" stroke-width="2.97"/>
+<line x1="749.31" y1="558.22" x2="743.72" y2="601.77" stroke="#111" stroke-width="3.96"/>
+<line x1="743.72" y1="601.77" x2="700.38" y2="609.82" stroke="#111" stroke-width="3.96"/>
+<line x1="700.38" y1="609.82" x2="679.53" y2="571.18" stroke="#111" stroke-width="3.96"/>
+<polygon points="679.53,571.18 658.48,562.46 656.95,574.24" fill="#111"/>
+<line x1="674.36" y1="467.75" x2="697.73" y2="450.02" stroke="#111" stroke-width="3.96"/>
+<line x1="699.42" y1="430.06" x2="679.53" y2="408.82" stroke="#111" stroke-width="3.96"/>
+<line x1="676.06" y1="408.35" x2="676.29" y2="410.16" stroke="#111" stroke-width="2.97"/>
+<line x1="672.58" y1="407.88" x2="673.05" y2="411.51" stroke="#111" stroke-width="2.97"/>
+<line x1="669.11" y1="407.41" x2="669.81" y2="412.85" stroke="#111" stroke-width="2.97"/>
+<line x1="665.63" y1="406.94" x2="666.57" y2="414.19" stroke="#111" stroke-width="2.97"/>
+<line x1="662.16" y1="406.47" x2="663.34" y2="415.53" stroke="#111" stroke-width="2.97"/>
+<line x1="658.69" y1="406.00" x2="660.10" y2="416.87" stroke="#111" stroke-width="2.97"/>
+<line x1="679.53" y1="408.82" x2="700.38" y2="370.18" stroke="#111" stroke-width="3.96"/>
+<line x1="700.38" y1="370.18" x2="743.72" y2="378.23" stroke="#111" stroke-width="3.96"/>
+<line x1="743.72" y1="378.23" x2="749.30" y2="421.78" stroke="#111" stroke-width="3.96"/>
+<polygon points="749.30,421.78 765.82,437.48 771.48,427.03" fill="#111"/>
+<line x1="679.53" y1="571.18" x2="699.42" y2="549.94" stroke="#111" stroke-width="3.96"/>
+<line x1="749.30" y1="421.78" x2="723.12" y2="434.46" stroke="#111" stroke-width="3.96"/>
+<line x1="762.00" y1="490.00" x2="769.04" y2="490.00" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="717.52" y1="526.31" x2="728.42" y2="508.71" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="717.52" y1="453.69" x2="728.42" y2="471.29" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+</g>
+<text x="709.65" y="539.03" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="709.65" y="539.03" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="788.00" y="537.27" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Ph</text>
+<text x="788.00" y="537.27" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">Ph</text>
+<text x="635.90" y="565.52" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Ph</text>
+<text x="635.90" y="565.52" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">Ph</text>
+<text x="709.65" y="440.97" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="709.65" y="440.97" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="635.90" y="414.48" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Ph</text>
+<text x="635.90" y="414.48" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">Ph</text>
+<text x="788.00" y="442.73" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Ph</text>
+<text x="788.00" y="442.73" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">Ph</text>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Cu</text>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#b05a2a">Cu</text>
+<text x="784.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">H</text>
+<text x="784.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">H</text>
+</svg>

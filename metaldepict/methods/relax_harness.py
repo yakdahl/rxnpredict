@@ -490,9 +490,10 @@ def _cv(xs):
 # are intentionally NOT scored (the bite angle etc. are set by the layout, not a
 # single ideal). These are the judge's weights, fixed; the METHODS tune their own.
 DEFAULT_JUDGE = {
-    "bond": 9.0,        # bondCV  -- uniform skeletal bond lengths (top priority)
+    "bond": 6.5,        # bondCV  -- uniform skeletal bond lengths (down a bit)
     "ring": 7.0,        # ringEdgeCV
     "ringang": 0.05,    # ringAngleDev (deg) -- regular polygons
+    "jang": 0.08,       # angleDevDeg -- junction angles off is bothersome (up)
     "coord": 1.6,       # coordLenErr -- P-Cu / Cu-H at target length
     "overlap": 1.0,     # per strictly-overlapping non-bonded pair (count)
     "crowd": 1.0,       # soft near-contact / anti-collapse (rewards whitespace)
@@ -659,44 +660,55 @@ def _aryl_substituent_rings(H):
 
 
 def _restyle_tilted_ring(H, ring, perp):
-    """Redraw a foreshortened ring with ONLY thickening dashes on the receding
-    (far) edges -- the standard hashed-wedge depth cue -- plus an aromatic circle;
-    near edges stay plain (NO solid bold/taper wedges).
+    """Redraw a foreshortened ring with thickening WEDGES on the edges that come
+    TOWARD the viewer and NOTHING (plain bonds) on the edges going away, plus an
+    aromatic circle.
 
-    3-D logic for which lateral side faces the viewer: the side of the ring
-    nearer the Cu-H core axis tilts TOWARD the viewer (plain edges), the outer
-    side recedes (dashes), so a top and a bottom substituent tilt as MIRROR
-    images.  Each receding edge is a thickening dash that starts NARROW at its
-    nearer (toward-viewer) vertex and widens going away into the page."""
+    Conventions (fixed): the wedge (toward-viewer) side is always the LEFT side
+    of the ring, so every tilted ring -- top or bottom -- reads the same way.
+    Never two taper wedges in a row: the first edge of a run of near-side edges
+    is a thickening taper, any further connected near edge is drawn BOLD (uniform
+    full width) instead, so a wedge never feeds straight into another wedge."""
     prx, pry = perp
     cx = sum(H.pos[a][0] for a in ring) / len(ring)
     cy = sum(H.pos[a][1] for a in ring) / len(ring)
     depth = {a: (H.pos[a][0] - cx) * prx + (H.pos[a][1] - cy) * pry for a in ring}
-    if H.metal is not None:                      # near side := closer to Cu-H axis
-        cuy = H.pos[H.metal][1]
-        pos = [a for a in ring if depth[a] > 0]
-        neg = [a for a in ring if depth[a] < 0]
+    pos = [a for a in ring if depth[a] > 0]
+    neg = [a for a in ring if depth[a] < 0]
 
-        def meany(s):
-            return sum(abs(H.pos[a][1] - cuy) for a in s) / len(s) if s else 0.0
-        if pos and neg and meany(pos) > meany(neg):
-            depth = {a: -v for a, v in depth.items()}
+    def meanx(s):
+        return sum(H.pos[a][0] for a in s) / len(s) if s else 0.0
+    if pos and neg and meanx(pos) > meanx(neg):  # near (wedge) side := LEFT (small x)
+        depth = {a: -v for a, v in depth.items()}
     cyc = H._ring_cycle(ring)
     edges = [(cyc[i], cyc[(i + 1) % len(cyc)]) for i in range(len(cyc))]
+    near = [(depth[e[0]] + depth[e[1]]) / 2 > 0 for e in edges]
     bonds = {frozenset((b.a, b.b)): b for b in H.scene.bonds}
-    for e in edges:
+    # rotate the edge list so a run of near-side edges does not wrap the seam
+    start = next((i for i in range(len(edges)) if not near[i]), 0)
+    order = [(start + k) % len(edges) for k in range(len(edges))]
+    run = False
+    for i in order:
+        e = edges[i]
         bd = bonds.get(frozenset(e))
         if bd is None:
             continue
         bd.order = 1
         bd.inside = None
-        bd.width = None
-        if (depth[e[0]] + depth[e[1]]) / 2 < 0:          # receding -> dash
-            hi, lo = (e[0], e[1]) if depth[e[0]] >= depth[e[1]] else (e[1], e[0])
-            bd.a, bd.b = hi, lo                  # narrow at near vertex, wide at far
-            bd.kind = "dash"
-        else:                                    # toward viewer -> plain
+        if near[i]:
+            if run:                              # a wedge already feeds this one
+                bd.kind = "bold"
+                bd.width = None
+            else:                                # first wedge of the run -> taper
+                lo, hi = (e[0], e[1]) if depth[e[0]] <= depth[e[1]] else (e[1], e[0])
+                bd.a, bd.b = lo, hi              # narrow at far vertex, wide toward viewer
+                bd.kind = "taper"
+                bd.width = 0.17 * L
+            run = True
+        else:
             bd.kind = "plain"
+            bd.width = None
+            run = False
     H.scene.ring_circle(list(ring), r_frac=0.58)
 
 
@@ -740,6 +752,7 @@ def _tilt_geometry(H, ring, comp, squash):
     prx, pry = -ay, ax                           # lateral unit (squashed = depth)
     exo = _exo_subtrees(H, ring)
     orig = {a: H.pos[a] for a in comp}
+    rs = set(ring)
     for a in ring:                               # foreshorten ring atoms only
         if a in H.pinned:
             continue
@@ -747,12 +760,27 @@ def _tilt_geometry(H, ring, comp, squash):
         u = rx * ax + ry * ay
         v = rx * prx + ry * pry
         H.pos[a] = (px + u * ax + squash * v * prx, py + u * ay + squash * v * pry)
-    for c, subs in exo.items():                  # re-hang decorations rigidly
+    # re-hang each exocyclic subtree along the EXTERIOR-ANGLE BISECTOR at its ring
+    # carbon (straight out from the ring), so decorations splay at clean, even
+    # angles instead of inheriting their stale pre-tilt directions.
+    ncx = sum(H.pos[a][0] for a in ring) / len(ring)
+    ncy = sum(H.pos[a][1] for a in ring) / len(ring)
+    for c, subs in exo.items():
+        sx = sy = 0.0
+        for n in (n for n in H.adj[c] if n in rs):
+            vx, vy = H.pos[n][0] - H.pos[c][0], H.pos[n][1] - H.pos[c][1]
+            ln = math.hypot(vx, vy) or 1e-9
+            sx += vx / ln
+            sy += vy / ln
+        ox, oy = -sx, -sy                        # away from the ring neighbours
+        ol = math.hypot(ox, oy)
+        if ol < 1e-6:                            # straight carbon -> radial outward
+            ox, oy = H.pos[c][0] - ncx, H.pos[c][1] - ncy
+            ol = math.hypot(ox, oy) or 1e-9
+        ox, oy = ox / ol, oy / ol
         for (d, atoms) in subs:
             blen = _vlen(orig[c], orig[d])
-            gx, gy = orig[d][0] - orig[c][0], orig[d][1] - orig[c][1]
-            gn = math.hypot(gx, gy) or 1e-9
-            tgt = (H.pos[c][0] + gx / gn * blen, H.pos[c][1] + gy / gn * blen)
+            tgt = (H.pos[c][0] + ox * blen, H.pos[c][1] + oy * blen)
             dx, dy = tgt[0] - orig[d][0], tgt[1] - orig[d][1]
             for a in atoms:
                 if a in H.pinned:
@@ -789,14 +817,30 @@ def tilt_relief(H, squash=0.5):
     the plane of the canvas' -- foreshorten its ring atoms laterally about the
     radial P->ring spine (decorations re-hung so they keep their fan) -- so it
     takes up less sideways room and any bond CROSSING through it is relieved.
-    The receding side is redrawn with thickening dashes (see _restyle_tilted_ring
-    for the 3-D depth logic).  When a ring is tilted, its MIRROR partner across
-    the Cu-H axis is tilted to match, so the depiction stays symmetric.  Kept
-    only when it does not increase crossings and strictly reduces crossings or
-    overlap without worsening crowd; else reverted.  Returns rings tilted."""
+    The near (outer) side is redrawn with thickening WEDGES, the receding side
+    plain (see _restyle_tilted_ring for the 3-D depth logic).  Fires on rings
+    that overlap, cross, OR are merely crowded; when a ring is tilted its MIRROR
+    partner across the Cu-H axis is tilted to match, so the depiction stays
+    symmetric.  Kept only when it adds no crossing/overlap and removes a crossing,
+    an overlap, or a meaningful amount of crowding; else reverted."""
     def n_over():
         return sum(1 for (a, b, mn) in H.overlaps
                    if _vlen(H.pos[a], H.pos[b]) < mn)
+
+    def ring_crowd(ring):
+        """Crowd-band penetration (squared) that this ring is involved in -- the
+        same soft measure as H._crowd but restricted to pairs touching the ring,
+        so a ring that is merely tight (no strict overlap) still scores > 0."""
+        rs = set(ring)
+        tot = 0.0
+        for (a, b, mn) in H.overlaps:
+            if a not in rs and b not in rs:
+                continue
+            d = _vlen(H.pos[a], H.pos[b])
+            clear = mn * 1.5
+            if d < clear:
+                tot += ((clear - d) / clear) ** 2
+        return tot
 
     def ring_bad(ring):
         rs = set(ring)
@@ -806,22 +850,28 @@ def tilt_relief(H, squash=0.5):
                  for (c, d) in H._raw_bonds
                  if c not in rs and d not in rs and len({a, b, c, d}) == 4
                  and _seg_cross(H.pos[a], H.pos[b], H.pos[c], H.pos[d]))
-        return ov + cr
+        return (ov + cr, ring_crowd(ring))
 
     cands = [c for c in _aryl_substituent_rings(H)]
-    bad = [c for c in cands if ring_bad(c[2]) > 0]
-    bad.sort(key=lambda c: -ring_bad(c[2]))
+    # a ring is worth tilting if it overlaps / crosses, OR is genuinely crowded
+    bad = [c for c in cands if ring_bad(c[2])[0] > 0 or ring_bad(c[2])[1] > 0.25]
+    bad.sort(key=lambda c: (-ring_bad(c[2])[0], -ring_bad(c[2])[1]))
 
     tilted = 0
     done = set()
     for (p, ipso, ring, comp) in bad:
-        if frozenset(ring) in done or ring_bad(ring) == 0:
+        bb = ring_bad(ring)
+        if frozenset(ring) in done or (bb[0] == 0 and bb[1] <= 0.25):
             continue
         before = (H.count_crossings(), n_over(), H._crowd())
         orig, perp = _tilt_geometry(H, ring, comp, squash)
         after = (H.count_crossings(), n_over(), H._crowd())
-        improved = (after[0] <= before[0] and after[2] <= before[2] + 1e-6
-                    and (after[0] < before[0] or after[1] < before[1]))
+        # keep a tilt that does not add crossings/overlaps and either removes a
+        # crossing / overlap, gains whitespace, OR depicts a clearly crowded ring
+        # in perspective -- the no-worse guard stops any label pile-up.
+        improved = (after[0] <= before[0] and after[1] <= before[1]
+                    and (after[0] < before[0] or after[1] < before[1]
+                         or after[2] < before[2] - 0.02 or bb[1] > 0.40))
         if not improved:
             for a, q in orig.items():
                 H.pos[a] = q
@@ -842,7 +892,37 @@ def tilt_relief(H, squash=0.5):
             else:
                 for a, q in orig2.items():
                     H.pos[a] = q
+    if tilted:
+        frozen = set().union(*done) if done else set()
+        _settle_around_tilts(H, frozen)
     return tilted
+
+
+def _settle_around_tilts(H, frozen):
+    """After tilting, a SLIGHT relax of the REST of the molecule with the tilted
+    rings (and Cu/H) held fixed, so the non-tilted bonds tidy up -- decorations
+    settle to even lengths and the other substituents take cleaner junction
+    angles (which also nudges them a little further out).  Angle-favouring
+    weights; reverted if it introduces a crossing or extra overlap."""
+    import relaxer_energy
+    def n_over():
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if _vlen(H.pos[a], H.pos[b]) < mn)
+    before = (H.count_crossings(), n_over(), H.metrics()["angleDevDeg"])
+    saved_pos = {i: H.pos[i] for i in H.ids}
+    saved_pin = set(H.pinned)
+    H.pinned = saved_pin | set(frozen)
+    try:
+        relaxer_energy.relax(H, {"w_bond": 4.0, "w_angle": 3.0, "w_overlap": 18.0,
+                                 "w_rigid": 67.0, "maxiter": 60})
+    finally:
+        H.pinned = saved_pin
+    after = (H.count_crossings(), n_over(), H.metrics()["angleDevDeg"])
+    # only keep the settle if it makes NOTHING worse (no new crossing / overlap,
+    # and the junction angles do not deteriorate)
+    if after[0] > before[0] or after[1] > before[1] or after[2] > before[2] + 0.5:
+        for i, q in saved_pos.items():
+            H.pos[i] = q
 
 
 def _backbone_atoms(H):
@@ -1009,6 +1089,7 @@ def quality_loss(H, c=DEFAULT_JUDGE):
     return (c["bond"] * m["bondCV"]
             + c["ring"] * m["ringEdgeCV"]
             + c["ringang"] * m["ringAngleDev"]
+            + c.get("jang", 0.0) * m.get("angleDevDeg", 0.0)
             + c["coord"] * m["coordLenErr"]
             + c["overlap"] * m["overlap"]
             + c.get("crowd", 0.0) * m.get("crowd", 0.0)

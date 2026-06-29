@@ -29,8 +29,11 @@ import relax_harness as R                       # noqa: E402
 import relaxer_energy                           # noqa: E402
 import seed_from_smiles as S                    # noqa: E402
 
-GLOBAL = {"w_bond": 7.96, "w_angle": 0.61, "w_overlap": 17.49,
-          "w_rigid": 67.3, "maxiter": 164}
+# angles weighted up / bonds down: a junction angle that is visibly off is more
+# bothersome than a slightly non-uniform bond, and the cure is to let the aryls
+# sit a little further out (longer P-aryl bonds) rather than force every bond to L.
+GLOBAL = {"w_bond": 6.0, "w_angle": 1.9, "w_overlap": 17.49,
+          "w_rigid": 67.3, "maxiter": 180}
 
 # ---- the grid axes (order fixes the animation layout) ----------------------
 BACKBONES = {                       # bare-P cores (each P gets 2 substituents)
@@ -101,10 +104,13 @@ CACHE_PATH = HERE.parent / "panels" / "reopt_cache.json"
 
 
 def _stubborn(H):
-    """A cell needs the heavier re-optimisation if it has ANY bond crossing or
-    more than ACCEPT near-contact overlaps."""
+    """A cell needs the heavier re-optimisation (and the relief / tilt pass) if it
+    has ANY bond crossing, more than ACCEPT near-contact overlaps, OR is CROWDED
+    (crowd > 0.7) -- crowding is where tilting a crowded aromatic substituent
+    into perspective buys the most room."""
     m = H.metrics()
-    return m.get("crossings", 0) > 0 or m["overlap"] > ACCEPT
+    return (m.get("crossings", 0) > 0 or m["overlap"] > ACCEPT
+            or m.get("crowd", 0.0) > 0.7)
 
 
 def load_cache():

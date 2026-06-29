@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="980" viewBox="0 0 1180 980">
+<rect width="1180" height="980" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-linejoin="round">
+<line x1="744.29" y1="417.58" x2="720.31" y2="433.95" stroke="#111" stroke-width="3.96"/>
+<polygon points="699.44,430.09 698.56,439.26 708.33,432.50" fill="#111"/>
+<line x1="695.71" y1="450.99" x2="671.56" y2="467.97" stroke="#111" stroke-width="3.96"/>
+<line x1="671.56" y1="467.97" x2="646.42" y2="453.48" stroke="#111" stroke-width="3.96"/>
+<line x1="661.27" y1="470.41" x2="649.47" y2="463.61" stroke="#111" stroke-width="3.96"/>
+<line x1="620.50" y1="453.49" x2="595.36" y2="468.00" stroke="#111" stroke-width="3.96"/>
+<line x1="595.36" y1="468.00" x2="557.25" y2="446.00" stroke="#111" stroke-width="3.96"/>
+<line x1="585.06" y1="470.44" x2="560.29" y2="456.14" stroke="#111" stroke-width="3.96"/>
+<line x1="557.25" y1="446.00" x2="519.14" y2="468.00" stroke="#111" stroke-width="3.96"/>
+<line x1="519.14" y1="468.00" x2="519.14" y2="512.00" stroke="#111" stroke-width="3.96"/>
+<line x1="526.40" y1="475.70" x2="526.40" y2="504.30" stroke="#111" stroke-width="3.96"/>
+<line x1="519.14" y1="512.00" x2="557.25" y2="534.00" stroke="#111" stroke-width="3.96"/>
+<line x1="557.25" y1="534.00" x2="595.36" y2="512.00" stroke="#111" stroke-width="3.96"/>
+<line x1="560.29" y1="523.86" x2="585.06" y2="509.56" stroke="#111" stroke-width="3.96"/>
+<line x1="595.36" y1="512.00" x2="620.50" y2="526.51" stroke="#111" stroke-width="3.96"/>
+<line x1="646.42" y1="526.52" x2="671.56" y2="512.03" stroke="#111" stroke-width="3.96"/>
+<line x1="649.47" y1="516.39" x2="661.27" y2="509.59" stroke="#111" stroke-width="3.96"/>
+<line x1="671.56" y1="512.03" x2="695.71" y2="529.01" stroke="#111" stroke-width="3.96"/>
+<line x1="699.44" y1="549.91" x2="682.90" y2="573.78" stroke="#111" stroke-width="3.96"/>
+<line x1="719.93" y1="544.68" x2="718.90" y2="546.19" stroke="#111" stroke-width="2.97"/>
+<line x1="719.55" y1="543.31" x2="717.49" y2="546.33" stroke="#111" stroke-width="2.97"/>
+<line x1="719.17" y1="541.95" x2="716.08" y2="546.48" stroke="#111" stroke-width="2.97"/>
+<line x1="718.79" y1="540.58" x2="714.67" y2="546.62" stroke="#111" stroke-width="2.97"/>
+<line x1="718.41" y1="539.22" x2="713.26" y2="546.77" stroke="#111" stroke-width="2.97"/>
+<line x1="718.03" y1="537.85" x2="711.85" y2="546.91" stroke="#111" stroke-width="2.97"/>
+<line x1="671.56" y1="512.03" x2="671.56" y2="467.97" stroke="#111" stroke-width="3.96"/>
+<line x1="595.36" y1="512.00" x2="595.36" y2="468.00" stroke="#111" stroke-width="3.96"/>
+<line x1="762.00" y1="490.00" x2="769.04" y2="490.00" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="716.31" y1="454.80" x2="727.72" y2="471.75" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+<line x1="716.31" y1="525.20" x2="727.72" y2="508.25" stroke="#111" stroke-width="3.96" stroke-dasharray="7.04,5.72"/>
+</g>
+<text x="707.95" y="442.39" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="707.95" y="442.39" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="682.90" y="406.22" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="20.2" font-weight="600" stroke="#ffffff" stroke-width="6.88" fill="#ffffff">t-Bu</text>
+<text x="682.90" y="406.22" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="20.2" font-weight="600" fill="#111">t-Bu</text>
+<text x="633.46" y="446.01" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">N</text>
+<text x="633.46" y="446.01" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#2c3e9e">N</text>
+<text x="633.46" y="533.99" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">N</text>
+<text x="633.46" y="533.99" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#2c3e9e">N</text>
+<text x="707.95" y="537.61" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">P</text>
+<text x="707.95" y="537.61" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#c87a00">P</text>
+<text x="744.29" y="562.42" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="20.2" font-weight="600" stroke="#ffffff" stroke-width="6.88" fill="#ffffff">t-Bu</text>
+<text x="744.29" y="562.42" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="20.2" font-weight="600" fill="#111">t-Bu</text>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">Cu</text>
+<text x="740.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#b05a2a">Cu</text>
+<text x="784.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" stroke="#ffffff" stroke-width="7.48" fill="#ffffff">H</text>
+<text x="784.00" y="490.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="22.0" font-weight="600" fill="#111">H</text>
+</svg>
