@@ -39,8 +39,8 @@ LIGANDS = {
     "segphos":  chem.SEGPHOS_PARENT_SMILES,
     "xantphos": "CC1(C)c2cccc(P(c3ccccc3)c3ccccc3)c2Oc2c(P(c3ccccc3)c3ccccc3)cccc21",
     "dpephos":  "O(c1ccccc1P(c1ccccc1)c1ccccc1)c1ccccc1P(c1ccccc1)c1ccccc1",
-    "ph_bpe":   "C(C[P@]1[C@@H](c2ccccc2)CC[C@@H]1c1ccccc1)[P@]1[C@@H]"
-                "(c2ccccc2)CC[C@@H]1c1ccccc1",
+    "ph_bpe":   "C(C[P]1[C@H](c2ccccc2)CC[C@H]1c1ccccc1)[P]1[C@H]"
+                "(c2ccccc2)CC[C@H]1c1ccccc1",
     "dppbz":    "c1ccc(P(c2ccccc2)c2ccccc2)c(P(c2ccccc2)c2ccccc2)c1",
 }
 # ferrocene-backbone ligands: (registry tag -> P-substituent placer)
