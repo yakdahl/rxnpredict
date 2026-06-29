@@ -42,9 +42,15 @@ from template_draw import L            # noqa: E402
 
 LIGANDS = ["dtbm_segphos", "xantphos", "dpephos", "ph_bpe"]
 
+# the catalytic / coordinating metal centre of a complex (Cu-H bisphosphine,
+# Ru-PNP pincer, Pd biaryl-monophosphine, ...).  Fe is deliberately EXCLUDED --
+# it is the structural ferrocene fragment, handled separately, never the centre.
+COMPLEX_METALS = {"Cu", "Ru", "Pd", "Ni", "Rh", "Ir", "Pt", "Co", "Au", "Ag",
+                  "Mn", "Fe2"}
+
 # ---- default target lengths (multiples of L) --------------------------------
-TGT_PCU = 1.32      # P -> Cu coordination (drawn slightly longer, conventional)
-TGT_CUH = 1.10      # Cu -> H
+TGT_PCU = 1.32      # donor -> metal coordination (drawn slightly longer)
+TGT_CUH = 1.10      # metal -> H (hydride)
 TGT_BOND = 1.00     # every ordinary skeletal / substituent bond
 IDEAL_RING = {3: 60.0, 4: 90.0, 5: 108.0, 6: 120.0, 7: 128.57}
 
@@ -77,7 +83,7 @@ class Harness:
     """Loads one ligand's Method-C seed and derives everything a relaxer needs."""
 
     def __init__(self, key=None, scene=None, title=None,
-                 exempt=None, extra_rigid=None, p_tetra=False):
+                 exempt=None, extra_rigid=None, p_tetra=False, metal=None):
         # Two seed sources: a named hardcoded template (key -> M.BUILDERS[key]())
         # or any pre-built Scene (e.g. generated from a SMILES). The rest of the
         # harness -- ring/body detection, joints, angles, overlaps, metrics --
@@ -95,6 +101,7 @@ class Harness:
         self.scene = sc
         self.title = title
         self.p_tetra = p_tetra                       # 360/n target for 4-bond P
+        self._metal_override = metal                  # explicit centre (Fe-salen, Cp2Zr)
         self._exempt = set(exempt) if exempt else set()
         self._extra_rigid = [set(g) for g in (extra_rigid or [])]
         self.pos = {i: (float(a.pos[0]), float(a.pos[1]))
@@ -114,6 +121,16 @@ class Harness:
             self.order[frozenset((b.a, b.b))] = b.order
             self._raw_bonds.append((b.a, b.b))
 
+        # ---- metal centre (needed before ring detection so the metallacycle is
+        # not fused into a rigid body) ----  an explicit override wins (Fe-salen,
+        # Cp2Zr -- centres deliberately kept out of the auto-detect set so they
+        # never shadow a ferrocene Cu); otherwise the first COMPLEX_METALS atom.
+        if self._metal_override is not None:
+            self.metal = self._metal_override
+        else:
+            self.metal = next((i for i, l in self.label.items()
+                               if l in COMPLEX_METALS), None)
+
         # ---- rings + fused ring systems -> rigid bodies ----
         self.rings = self._find_rings()
         # bulky saturated carbocycles (e.g. cyclohexyl): all-single-bond, all
@@ -132,14 +149,20 @@ class Harness:
             for a in bd:
                 self.body_of[a] = bi
 
-        # ---- metal + hydride (pins) ----
-        self.metal = next((i for i, l in self.label.items() if l == "Cu"), None)
+        # ---- hydride (pin) ----
         self.hyd = None
         if self.metal is not None:
             for nb in self.adj[self.metal]:
                 if self.label[nb] == "H":
                     self.hyd = nb
-        self.donors = [i for i, l in self.label.items() if l == "P"]
+        # donors = every P, plus any N/O/S that actually coordinates the metal
+        # (salen N/O, oxalamide N, pincer amine N, ...).  The substituent-fanning
+        # helpers no-op on a donor that has no free substituent, so a rigid-
+        # backbone donor is left untouched.
+        self.donors = [i for i, l in self.label.items()
+                       if l == "P" or (l in ("N", "O", "S")
+                                       and self.metal is not None
+                                       and self.metal in self.adj[i])]
         self.pinned = set(x for x in (self.metal, self.hyd) if x is not None)
 
         # ---- bonds with target lengths ----
@@ -164,7 +187,9 @@ class Harness:
         must not fuse Cu+P into a rigid body."""
         rings = set()
         adj = self.adj
-        metal_ids = {i for i, l in self.label.items() if l == "Cu"}
+        metal_ids = {i for i, l in self.label.items() if l in COMPLEX_METALS}
+        if self.metal is not None:
+            metal_ids.add(self.metal)
         for (u, v) in self._raw_bonds:
             if u in metal_ids or v in metal_ids:
                 continue
@@ -224,12 +249,12 @@ class Harness:
         return bodies
 
     def _target_len(self, a, b):
-        la, lb = self.label[a], self.label[b]
         k = self.kind[frozenset((a, b))]
-        if {la, lb} == {"P", "Cu"} or k in ("dative", "coord"):
+        if self.metal in (a, b):                       # any metal-X bond
+            other = b if a == self.metal else a
+            return (TGT_CUH if self.label[other] == "H" else TGT_PCU) * L
+        if k in ("dative", "coord"):                   # e.g. Pd...C_ipso contact
             return TGT_PCU * L
-        if {la, lb} == {"Cu", "H"}:
-            return TGT_CUH * L
         return TGT_BOND * L
 
     def _rigid_pairs(self):
@@ -262,8 +287,8 @@ class Harness:
             n = len(nbrs)
             if n < 2:
                 continue
-            if self.label[j] == "Cu":
-                ideal = 120.0                      # trigonal metal
+            if j == self.metal:
+                ideal = 90.0 if n >= 4 else 120.0    # square-planar/oct. vs trigonal
             elif self.label[j] == "P":
                 # 112 deg reads tetrahedral for a 3-bond P, but a 4-bond P (two
                 # substituents + backbone + Cu) can only average 360/4 = 90, so
@@ -309,10 +334,10 @@ class Harness:
 
     # --------------------------------------------------------------- metrics --
     def metrics(self):
-        # skeletal single-ish bond lengths (exclude P-Cu coordination + Cu-H)
+        # skeletal single-ish bond lengths (exclude metal coordination + hydride)
         sk = []
         for (a, b, t) in self.bonds:
-            if {self.label[a], self.label[b]} & {"Cu"}:
+            if self.metal in (a, b):
                 continue
             sk.append(_vlen(self.pos[a], self.pos[b]))
         bondCV = _cv(sk)
@@ -332,10 +357,10 @@ class Harness:
         # overlaps
         ov = sum(1 for (a, b, mn) in self.overlaps
                  if _vlen(self.pos[a], self.pos[b]) < mn)
-        # coordination-bond length error (how far P-Cu / Cu-H are from target)
+        # coordination-bond length error (how far metal-donor / metal-H are off)
         coorderr = []
         for (a, b, t) in self.bonds:
-            if {self.label[a], self.label[b]} & {"Cu"}:
+            if self.metal in (a, b):
                 coorderr.append(abs(_vlen(self.pos[a], self.pos[b]) - t) / L)
         return {
             "bondCV": round(bondCV, 4),
@@ -516,7 +541,7 @@ def fan_substituents(H, margin_deg=22.0):
     ring shapes are preserved; the energy relax then only has to fix lengths."""
     bodies, pin, inv, translate, rotate = body_helpers(H)
     for p in H.donors:
-        nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+        nbrs = [n for n in H.adj[p] if n != H.metal]
         if len(nbrs) < 2:
             continue
         # connected component reached from each neighbour with the P-n bond cut
@@ -527,7 +552,7 @@ def fan_substituents(H, margin_deg=22.0):
             while stack:
                 x = stack.pop()
                 for y in H.adj[x]:
-                    if y == p or y in seen or H.label[y] == "Cu":
+                    if y == p or y in seen or y == H.metal:
                         continue
                     seen.add(y)
                     stack.append(y)
@@ -578,7 +603,7 @@ def declutter(H, angles=(10, -10, 20, -20, 32, -32, 45, -45), passes=2):
 
     for _ in range(passes):
         for p in H.donors:
-            nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+            nbrs = [n for n in H.adj[p] if n != H.metal]
             if len(nbrs) < 2:
                 continue
             comp = {}
@@ -588,7 +613,7 @@ def declutter(H, angles=(10, -10, 20, -20, 32, -32, 45, -45), passes=2):
                 while stack:
                     x = stack.pop()
                     for y in H.adj[x]:
-                        if y == p or y in seen or H.label[y] == "Cu":
+                        if y == p or y in seen or y == H.metal:
                             continue
                         seen.add(y)
                         stack.append(y)
@@ -628,7 +653,7 @@ def _p_components(H):
     P bond cut (Cu excluded)} plus which neighbour is the backbone (biggest)."""
     res = {}
     for p in H.donors:
-        nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+        nbrs = [n for n in H.adj[p] if n != H.metal]
         if len(nbrs) < 2:
             continue
         comp = {}
@@ -638,7 +663,7 @@ def _p_components(H):
             while stack:
                 x = stack.pop()
                 for y in H.adj[x]:
-                    if y == p or y in seen or H.label[y] == "Cu":
+                    if y == p or y in seen or y == H.metal:
                         continue
                     seen.add(y)
                     stack.append(y)
@@ -721,6 +746,82 @@ def _restyle_tilted_ring(H, ring, perp):
     H.scene.ring_circle(list(ring), r_frac=0.58)
 
 
+def biaryl_into_plane(H, squash=0.5):
+    """Rotate a biaryl-monophosphine's pendant ring ABOUT THE BIARYL AXIS, into
+    the plane of the board, so the metal...C_ipso contact reads cleanly (the SPhos
+    / RuPhos / biaryl-Pd motif).  The ring that both (a) carries the carbon which
+    coordinates the metal through a dashed coord bond and (b) hangs off a BOLD
+    biaryl bond is foreshortened laterally about that bond's direction; its
+    substituents (OMe, ...) are re-hung on the exterior-angle bisector and the
+    near side is redrawn with thickening wedges (perspective depth).  A no-op when
+    there is no such metal...C_ipso biaryl contact.  Apply AFTER the final relax
+    (the tilt is a drawing transform the spring solver would otherwise undo)."""
+    if H.metal is None:
+        return None
+    rings = [set(r) for r in H.rings]
+    for cipso in list(H.adj[H.metal]):
+        if H.label[cipso] or H.kind.get(frozenset((H.metal, cipso))) != "coord":
+            continue                                  # only a coord'd carbon
+        ring = next((r for r in rings if cipso in r), None)
+        if ring is None:
+            continue
+        partner = next((nb for nb in H.adj[cipso]
+                        if H.kind.get(frozenset((cipso, nb))) == "bold"), None)
+        if partner is None:
+            continue
+        _foreshorten_biaryl_ring(H, ring, cipso, partner, squash)
+        return ring
+    return None
+
+
+def _foreshorten_biaryl_ring(H, ring, pivot_a, partner, squash):
+    """Foreshorten `ring` laterally about the biaryl axis (pivot_a -> ring centroid,
+    parallel to the biaryl bond) and re-hang its exocyclic subtrees on the
+    exterior bisector, then restyle the near side with perspective wedges."""
+    px, py = H.pos[pivot_a]
+    cx = sum(H.pos[a][0] for a in ring) / len(ring)
+    cy = sum(H.pos[a][1] for a in ring) / len(ring)
+    ax, ay = cx - px, cy - py
+    an = math.hypot(ax, ay) or 1e-9
+    ax, ay = ax / an, ay / an                         # spine (biaryl axis, kept)
+    prx, pry = -ay, ax                                # lateral (squashed = depth)
+    exo = _exo_subtrees(H, ring)
+    comp = set(ring) | {a for subs in exo.values() for (_, atoms) in subs for a in atoms}
+    orig = {a: H.pos[a] for a in comp}
+    rs = set(ring)
+    for a in ring:
+        if a in H.pinned:
+            continue
+        rx, ry = H.pos[a][0] - px, H.pos[a][1] - py
+        u = rx * ax + ry * ay
+        v = rx * prx + ry * pry
+        H.pos[a] = (px + u * ax + squash * v * prx, py + u * ay + squash * v * pry)
+    ncx = sum(H.pos[a][0] for a in ring) / len(ring)
+    ncy = sum(H.pos[a][1] for a in ring) / len(ring)
+    for c, subs in exo.items():
+        sx = sy = 0.0
+        for n in (n for n in H.adj[c] if n in rs):
+            vx, vy = H.pos[n][0] - H.pos[c][0], H.pos[n][1] - H.pos[c][1]
+            ln = math.hypot(vx, vy) or 1e-9
+            sx += vx / ln
+            sy += vy / ln
+        ox, oy = -sx, -sy
+        ol = math.hypot(ox, oy)
+        if ol < 1e-6:
+            ox, oy = H.pos[c][0] - ncx, H.pos[c][1] - ncy
+            ol = math.hypot(ox, oy) or 1e-9
+        ox, oy = ox / ol, oy / ol
+        for (d, atoms) in subs:
+            blen = _vlen(orig[c], orig[d])
+            tgt = (H.pos[c][0] + ox * blen, H.pos[c][1] + oy * blen)
+            dx, dy = tgt[0] - orig[d][0], tgt[1] - orig[d][1]
+            for a in atoms:
+                if a in H.pinned:
+                    continue
+                H.pos[a] = (orig[a][0] + dx, orig[a][1] + dy)
+    _restyle_tilted_ring(H, ring, (prx, pry))
+
+
 def _exo_subtrees(H, ring):
     """For each ring atom, the subtrees hanging off it (substituents/labels):
     {anchor_ring_atom -> [(neighbour, {subtree atom ids})...]}, never crossing
@@ -729,14 +830,14 @@ def _exo_subtrees(H, ring):
     res = {}
     for c in ring:
         for d in H.adj[c]:
-            if d in rs or H.label[d] == "P" or H.label[d] == "Cu":
+            if d in rs or H.label[d] == "P" or d == H.metal:
                 continue
             seen = {d}
             stack = [d]
             while stack:
                 x = stack.pop()
                 for y in H.adj[x]:
-                    if y in rs or y in seen or H.label[y] in ("P", "Cu"):
+                    if y in rs or y in seen or H.label[y] == "P" or y == H.metal:
                         continue
                     seen.add(y)
                     stack.append(y)

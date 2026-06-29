@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1040" viewBox="0 0 1240 1040">
+<rect width="1240" height="1040" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-linejoin="round">
+<line x1="559.26" y1="427.89" x2="555.76" y2="460.10" stroke="#111" stroke-width="3.78"/>
+<polygon points="554.40,461.42 581.57,491.66 586.68,486.68 557.11,458.78" fill="#111"/>
+<line x1="584.13" y1="489.17" x2="605.45" y2="474.91" stroke="#111" stroke-width="7.18"/>
+<polygon points="607.20,474.18 593.21,436.15 586.61,438.89 603.71,475.63" fill="#111"/>
+<line x1="589.91" y1="437.52" x2="559.26" y2="427.89" stroke="#111" stroke-width="3.78"/>
+<line x1="685.97" y1="431.56" x2="654.81" y2="439.40" stroke="#111" stroke-width="3.78"/>
+<polygon points="653.11,438.58 633.92,474.26 640.34,477.38 656.51,440.23" fill="#111"/>
+<line x1="637.13" y1="475.82" x2="657.60" y2="491.30" stroke="#111" stroke-width="7.18"/>
+<polygon points="658.87,492.69 690.01,466.55 685.19,461.28 656.32,489.90" fill="#111"/>
+<line x1="687.60" y1="463.92" x2="685.97" y2="431.56" stroke="#111" stroke-width="3.78"/>
+<line x1="603.94" y1="533.53" x2="593.66" y2="542.19" stroke="#111" stroke-width="3.78"/>
+<line x1="635.25" y1="534.44" x2="645.01" y2="543.68" stroke="#111" stroke-width="3.78"/>
+<line x1="608.36" y1="502.52" x2="578.89" y2="458.28" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="632.63" y1="503.22" x2="664.61" y2="460.76" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+</g>
+<ellipse cx="578.90" cy="457.92" rx="20.74" ry="12.53" fill="none" stroke="#111" stroke-width="3.78" transform="rotate(-123.2 578.90 457.92)"/>
+<ellipse cx="664.62" cy="460.40" rx="20.74" ry="12.53" fill="none" stroke="#111" stroke-width="3.78" transform="rotate(-53.5 664.62 460.40)"/>
+<text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Zr</text>
+<text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#5a6470">Zr</text>
+<text x="577.60" y="555.72" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
+<text x="577.60" y="555.72" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
+<text x="660.26" y="558.11" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
+<text x="660.26" y="558.11" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
+</svg>

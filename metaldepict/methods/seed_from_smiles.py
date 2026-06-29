@@ -40,10 +40,25 @@ from template_draw import Scene, L                       # noqa: E402
 from src import chem                                     # noqa: E402
 
 P_COL, CU_COL, O_COL, FE_COL = "#c87a00", "#b05a2a", "#c0392b", "#b05a2a"
+MET_COL = "#5a6470"          # generic transition-metal glyph colour (Ru/Pd/...)
 COLORS = {"P": P_COL, "Cu": CU_COL, "O": O_COL, "Fe": FE_COL,
-          "N": "#2c3e9e", "S": "#b8860b", "B": "#1f8a70", "Si": "#555"}
+          "N": "#2c3e9e", "S": "#b8860b", "B": "#1f8a70", "Si": "#555",
+          "Ru": MET_COL, "Pd": MET_COL, "Ni": MET_COL, "Rh": MET_COL,
+          "Ir": MET_COL, "Pt": MET_COL, "Co": MET_COL, "Mn": MET_COL,
+          "Zr": MET_COL, "Ti": MET_COL, "Hf": MET_COL, "V": MET_COL,
+          "Cr": MET_COL, "Cl": "#2e8b57", "Br": "#8b4513"}
+# the catalytic metal centre (NOT ferrocene Fe); donors that coordinate it
+COMPLEX_METALS = {"Cu", "Ru", "Pd", "Ni", "Rh", "Ir", "Pt", "Co", "Au", "Ag", "Mn"}
+# centres that only appear via scene_from_mol on a PRE-ASSEMBLED complex (never a
+# ferrocene SMILES, which is routed away earlier): Fe(salen), Cp2Zr.  Broader than
+# COMPLEX_METALS so seed-building can find them without those symbols ever being
+# mistaken for a coordination centre inside a ferrocene Cu-H ligand.
+SEED_METALS = COMPLEX_METALS | {"Fe", "Zr", "Ti", "Hf", "V", "Cr"}
+DONOR_SYMBOLS = {"P", "N", "O", "S", "C"}        # atoms that may coordinate a metal
 # atoms drawn as a glyph (heteroatoms + metal + hydride); carbon stays blank
-LABEL_SYMBOLS = {"P", "O", "N", "S", "B", "Si", "Cu", "Fe", "H", "Cl", "Br", "F"}
+LABEL_SYMBOLS = {"P", "O", "N", "S", "B", "Si", "H", "Cl", "Br", "F",
+                 "Fe", "Cu", "Ru", "Pd", "Ni", "Rh", "Ir", "Pt", "Co", "Mn",
+                 "Zr", "Ti", "Hf", "V", "Cr"}
 
 _ABBR = rdAbbreviations.ParseAbbreviations(
     "tBu [*]C(C)(C)C tBu tBu\n"
@@ -87,10 +102,26 @@ def _median_bond(conf, mol):
 
 
 def scene_from_smiles(smiles, name=None, abbreviate=True):
+    """Cu-H bisphosphine entry point: ligand SMILES -> Cu-H complex -> scene."""
     cx, _ = _complex(smiles)
     if any(a.GetSymbol() == "Fe" for a in cx.GetAtoms()):
         return _ferrocene_scene(cx, name)
+    return scene_from_mol(cx, name, abbreviate=abbreviate), name or "molecule"
 
+
+def scene_from_mol(cx, name=None, abbreviate=True):
+    """Build a Scene from ANY pre-assembled metal complex RDKit mol (the metal
+    already present, donor->metal bonds set as DATIVE/coordinate).  Works for any
+    centre in SEED_METALS and any donor atom -- Cu-H bisphosphine, Ru-PNP pincer,
+    Pd biaryl-monophosphine, Cu oxalamide, Fe-salen, Grubbs, metallocenes, ...
+
+    eta-n (HAPTIC) coordination is an OPTION fed in as connectivity: bond every
+    ring carbon of an eta-n ligand to the metal with a DATIVE bond.  The tool then
+    recognises the ring, rotates it into the correct perspective-disc orientation
+    facing the metal (the ferrocene Cp drawing), and replaces the n spokes with a
+    single dashed metal->centroid bond.  Returns a Scene whose `.meta` carries
+    {metal, exempt, extra_rigid} for the Harness.
+    """
     if abbreviate:
         try:
             cx = rdAbbreviations.CondenseMolAbbreviations(cx, _ABBR, maxCoverage=1.0)
@@ -115,25 +146,42 @@ def scene_from_smiles(smiles, name=None, abbreviate=True):
                         conf.GetAtomPosition(a.GetIdx()).y * scale)
            for a in cx.GetAtoms()}
 
-    cu = next(a.GetIdx() for a in cx.GetAtoms() if a.GetSymbol() == "Cu")
-    hyd = next((nb.GetIdx() for nb in cx.GetAtomWithIdx(cu).GetNeighbors()
-                if nb.GetSymbol() == "H"), None)
-    _orient_cuh(pos, cu, hyd)
+    metal = next((a.GetIdx() for a in cx.GetAtoms()
+                  if a.GetSymbol() in SEED_METALS), None)
+    haptic = _haptic_rings(cx, metal) if metal is not None else []
+    if metal is not None:
+        haptic_atoms = {a for h in haptic for a in h}
+        sigma = [nb.GetIdx() for nb in cx.GetAtomWithIdx(metal).GetNeighbors()
+                 if nb.GetIdx() not in haptic_atoms]
+        if haptic:
+            _orient_for_haptic(pos, metal, sigma)
+        else:
+            hyd = next((nb.GetIdx() for nb in cx.GetAtomWithIdx(metal).GetNeighbors()
+                        if nb.GetSymbol() == "H"), None)
+            _orient_metal(pos, metal, hyd, cx)
 
-    return _build_scene(cx, kek, pos), name or "molecule"
+    hinfo = _layout_haptic_discs(pos, metal, haptic, sigma, cx) if haptic else []
+    return _build_scene(cx, kek, pos, metal, hinfo)
 
 
-def _orient_cuh(pos, cu, hyd):
-    """Rotate every atom so Cu->H points along +x (H to the right of Cu)."""
-    if hyd is None:
-        return
-    cx_, cy_ = pos[cu]
-    hx, hy = pos[hyd]
-    th = -math.atan2(hy - cy_, hx - cx_)
+def _orient_metal(pos, metal, hyd, cx):
+    """Rotate so metal->H points +x (H to the right) when there is a hydride;
+    otherwise orient the FARTHEST metal->neighbour vector horizontally, giving a
+    stable, readable frame for any complex (Cu-H, Ru-PNP, Pd biaryl, ...)."""
+    mx, my = pos[metal]
+    if hyd is not None:
+        ref = hyd
+    else:
+        nbrs = [nb.GetIdx() for nb in cx.GetAtomWithIdx(metal).GetNeighbors()]
+        if not nbrs:
+            return
+        ref = max(nbrs, key=lambda i: math.hypot(pos[i][0] - mx, pos[i][1] - my))
+    rx, ry = pos[ref]
+    th = -math.atan2(ry - my, rx - mx)
     c, s = math.cos(th), math.sin(th)
     for i, (x, y) in list(pos.items()):
-        x0, y0 = x - cx_, y - cy_
-        pos[i] = (cx_ + c * x0 - s * y0, cy_ + s * x0 + c * y0)
+        x0, y0 = x - mx, y - my
+        pos[i] = (mx + c * x0 - s * y0, my + s * x0 + c * y0)
 
 
 def _ring_centroid(mol, ring, pos):
@@ -142,8 +190,132 @@ def _ring_centroid(mol, ring, pos):
     return (sum(xs) / len(xs), sum(ys) / len(ys))
 
 
-def _build_scene(cx, kek, pos):
+# --------------------------------------------------------------------------- #
+#  eta-n HAPTIC coordination (cyclopentadienyl / arene), drawn as a perspective
+#  disc facing the metal -- the requested general "cyclopentyl nu5" option.
+# --------------------------------------------------------------------------- #
+def _haptic_rings(cx, metal):
+    """Rings whose carbons (mostly) DATIVE-bond the metal == an eta-n ligand.
+    Returns each as a list of ring atom idxs in cyclic (adjacency) order."""
+    out = []
+    for ring in cx.GetRingInfo().AtomRings():
+        dat = [a for a in ring
+               if cx.GetBondBetweenAtoms(a, metal) is not None
+               and cx.GetBondBetweenAtoms(a, metal).GetBondType() == Chem.BondType.DATIVE]
+        if len(dat) >= 3 and len(dat) >= len(ring) - 1:
+            out.append(list(ring))                   # AtomRings() is already cyclic
+    return out
+
+
+def _orient_for_haptic(pos, metal, sigma):
+    """Rotate the whole complex so the sigma-ligand bundle points DOWN (-y) and
+    the eta-n discs sit UP -- the canonical metallocene / piano-stool frame."""
+    mx, my = pos[metal]
+    if not sigma:
+        return
+    sx = sum(pos[s][0] - mx for s in sigma)
+    sy = sum(pos[s][1] - my for s in sigma)
+    if abs(sx) < 1e-9 and abs(sy) < 1e-9:
+        return
+    cur = math.atan2(sy, sx)
+    th = (-math.pi / 2) - cur                        # send sigma bundle to 270 deg
+    c, s = math.cos(th), math.sin(th)
+    for i, (x, y) in list(pos.items()):
+        x0, y0 = x - mx, y - my
+        pos[i] = (mx + c * x0 - s * y0, my + s * x0 + c * y0)
+
+
+def _disc_dirs(n, has_sigma):
+    """Outward directions (deg) for n eta-n discs about the metal: a vertical
+    sandwich when there is no sigma ligand (ferrocene/rhodocene), else a clamshell
+    opening UP, away from the sigma ligands (bent metallocene / piano stool)."""
+    if not has_sigma:
+        if n == 1:
+            return [90.0]
+        if n == 2:
+            return [90.0, 270.0]
+        return [90.0 + 360.0 * k / n for k in range(n)]
+    if n == 1:
+        return [90.0]
+    bend = 70.0
+    return [90.0 + bend / 2.0 - bend * k / (n - 1) for k in range(n)]
+
+
+def _subtree(cx, start, ring_set, metal):
+    seen, stack = {start}, [start]
+    while stack:
+        x = stack.pop()
+        for nb in cx.GetAtomWithIdx(x).GetNeighbors():
+            y = nb.GetIdx()
+            if y in seen or y in ring_set or y == metal:
+                continue
+            seen.add(y); stack.append(y)
+    seen.discard(start)
+    return seen
+
+
+def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.78, squash=0.6):
+    """Re-lay each eta-n ring as a regular perspective polygon, laterally squashed
+    so it reads as a disc tilted toward the viewer, centred `gap`*L from the metal
+    along its assigned direction; substituents ride rigidly with their ring atom.
+
+    A bare metallocene (no sigma ligand: ferrocene / rhodocene) is drawn the
+    CLASSIC way the existing ferrocene fragment is -- both discs tilted the SAME
+    way (apex up, front/lower edge bold).  When sigma ligands are present (bent
+    metallocene, piano-stool half sandwich) each disc instead points its apex
+    OUTWARD and bolds the edge nearest the metal, so the eta-n face clearly turns
+    toward the centre.  Returns hinfo: per-ring {ring, centroid, edge styles}."""
+    mx, my = pos[metal]
+    dirs = _disc_dirs(len(rings), bool(sigma))
+    sandwich = not sigma                              # ferrocene-style same tilt
+    hinfo = []
+    for ring, ddeg in zip(rings, dirs):
+        n = len(ring)
+        pen_r = L / (2 * math.sin(math.pi / n))
+        u = (math.cos(math.radians(ddeg)), math.sin(math.radians(ddeg)))
+        center = (mx + gap * L * u[0], my + gap * L * u[1])
+        face = 90.0 if sandwich else ddeg            # apex direction of the disc
+        fu = (math.cos(math.radians(face)), math.sin(math.radians(face)))
+        ring_set = set(ring)
+        newpos = {}
+        for k, atom in enumerate(ring):
+            th = math.radians(90.0 + 360.0 * k / n + (face - 90.0))
+            lx, ly = pen_r * math.cos(th), pen_r * math.sin(th)
+            along = lx * fu[0] + ly * fu[1]
+            perp = (-lx * fu[1] + ly * fu[0]) * squash
+            px = center[0] + along * fu[0] - perp * fu[1]
+            py = center[1] + along * fu[1] + perp * fu[0]
+            newpos[atom] = (px, py)
+        for atom in ring:                            # move atom + its substituents
+            dx = newpos[atom][0] - pos[atom][0]
+            dy = newpos[atom][1] - pos[atom][1]
+            for sub in _subtree(cx, atom, ring_set, metal):
+                pos[sub] = (pos[sub][0] + dx, pos[sub][1] + dy)
+            pos[atom] = newpos[atom]
+        # which two adjacent vertices define the BOLD front edge: the lowest two
+        # (classic ferrocene front) for a sandwich, else the two nearest the metal.
+        if sandwich:
+            key = lambda a: pos[a][1]                 # lowest y == front
+        else:
+            key = lambda a: math.hypot(pos[a][0] - mx, pos[a][1] - my)
+        near = set(sorted(ring, key=key)[:2])
+        style = {}
+        for k in range(n):
+            a, b = ring[k], ring[(k + 1) % n]
+            ka, kb = a in near, b in near
+            style[frozenset((a, b))] = ("bold" if ka and kb
+                                        else "taper" if ka or kb else "plain")
+        hinfo.append({"ring": ring, "center": center, "style": style})
+    return hinfo
+
+
+def _build_scene(cx, kek, pos, metal=None, hinfo=None):
     sc = Scene()
+    hinfo = hinfo or []
+    hap_atoms = {a for h in hinfo for a in h["ring"]}
+    hap_edges = {}
+    for h in hinfo:
+        hap_edges.update(h["style"])
     ri = cx.GetRingInfo()
     arom_rings = [set(r) for r in ri.AtomRings()
                   if all(cx.GetAtomWithIdx(a).GetIsAromatic() for a in r)]
@@ -164,11 +336,24 @@ def _build_scene(cx, kek, pos):
         i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
         si, sj = cx.GetAtomWithIdx(i).GetSymbol(), cx.GetAtomWithIdx(j).GetSymbol()
         a, bb = idmap[i], idmap[j]
-        # coordination bond P->Cu (or any X->metal) -> dashed
-        if {si, sj} & {"Cu", "Fe"} and ({si, sj} - {"Cu", "Fe"}):
-            if "Cu" in (si, sj):
-                sc.bond(a, bb, order=1, kind="coord")
-                continue
+        # eta-n spokes (metal <-> a haptic ring carbon) are not drawn individually;
+        # a single dashed metal->centroid bond is added after the loop instead.
+        if metal in (i, j) and ({i, j} & hap_atoms):
+            continue
+        # an edge of an eta-n disc -> perspective styling (bold near / taper / plain)
+        es = hap_edges.get(frozenset((i, j)))
+        if es is not None:
+            sc.bond(a, bb, order=1, kind=es,
+                    width=(_CPW_BIG if es == "taper" else None))
+            continue
+        # donor->metal coordination is exactly the DATIVE bonds set when the
+        # complex was assembled (P/N/O/S/C_ipso -> metal) -> dashed coord bond.
+        # Covalent metal-X ancillaries (Cu-H, Ru-Cl, Pd-Br, Pd-Ph, Fe-Cl) are
+        # ordinary SINGLE bonds and stay plain lines.
+        if (b.GetBondType() == Chem.BondType.DATIVE
+                and ({si, sj} & SEED_METALS)):
+            sc.bond(a, bb, order=1, kind="coord")
+            continue
         # bold biaryl axis: single bond joining two different aromatic rings,
         # itself not in a ring
         kb = kek.GetBondBetweenAtoms(i, j)
@@ -187,13 +372,31 @@ def _build_scene(cx, kek, pos):
         if bd == Chem.BondDir.BEGINDASH:
             sc.bond(a, bb, order=1, kind="dash")
             continue
-        # ordinary single / double (double drawn inside its ring)
+        # ordinary single / double (double drawn inside its ring); never re-draw a
+        # double INSIDE an eta-n disc (its edges were already styled above)
         inside = None
-        if order == 2:
+        if order == 2 and frozenset((i, j)) not in hap_edges:
             r = next((rr for rr in arom_rings if i in rr and j in rr), None)
             if r:
                 inside = _ring_centroid(cx, r, pos)
         sc.bond(a, bb, order=order, inside=inside)
+
+    # finish each eta-n disc: aromatic circle + an invisible centroid anchor +
+    # one dashed metal->centroid coord bond; freeze ring+centroid+metal rigid.
+    exempt, extra_rigid = set(), []
+    for h in hinfo:
+        vids = [idmap[a] for a in h["ring"]]
+        sc.ring_circle(vids, r_frac=0.58)
+        cen = sc.atom(h["center"], label="", halo=False)
+        if metal is not None:
+            sc.bond(idmap[metal], cen, order=1, kind="coord")
+        frozen = set(vids) | {cen}
+        if metal is not None:
+            frozen.add(idmap[metal])
+        exempt |= frozen
+        extra_rigid.append(frozen)
+    sc.meta = {"metal": idmap[metal] if metal is not None else None,
+               "exempt": exempt, "extra_rigid": extra_rigid}
     return sc
 
 
@@ -237,18 +440,108 @@ def _cp_ring(sc, center, squash=0.6):
     return ids, cen
 
 
-def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25, squash=0.6):
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25, squash=0.6,
+                     metal_label="Fe", metal_col=None):
     """Reference-style SANDWICH with both Cp discs tilted the SAME way (apex up):
-    upper ring above Fe, lower ring below, Fe labelled in the centre, eta5 drawn
-    as a DASHED line from Fe to the CENTRE of each ring.  Returns
-    (fe, upper_ids, lower_ids, centre_ids)."""
+    upper ring above the metal, lower ring below, metal labelled in the centre,
+    eta5 drawn as a DASHED line from the metal to the CENTRE of each ring.  The
+    metal label/colour is parametrised so the same parallel-sandwich depiction
+    serves any metallocene (ferrocene Fe, rhodocene Cp2Rh, ...).  Returns
+    (metal, upper_ids, lower_ids, centre_ids)."""
     fx, fy = fe_xy
     up, cu = _cp_ring(sc, (fx, fy + gap), squash=squash)
     dn, cd = _cp_ring(sc, (fx, fy - gap), squash=squash)
-    fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
-    sc.bond(fe, cu, order=1, kind="coord")            # eta5: dashed Fe -> ring centre
+    fe = sc.atom((fx, fy), label=metal_label, color=metal_col or FE_COL)
+    sc.bond(fe, cu, order=1, kind="coord")            # eta5: dashed M -> ring centre
     sc.bond(fe, cd, order=1, kind="coord")
     return fe, up, dn, [cu, cd]
+
+
+def _bent_cp_ring(sc, center, deg, squash=0.62, scale=1.0):
+    """A Cp disc for a BENT metallocene: same perspective pentagon as the parallel
+    sandwich, but ROTATED so its apex points away from the metal along `deg` (the
+    metal->centroid direction), giving the open clamshell that reads as a bent
+    metallocene.  Returns (vertex_ids, centre_anchor)."""
+    cx, cy = center
+    r = _PEN_R * scale
+    base = [90, 162, 234, 306, 18]                    # apex-up reference pentagon
+    rot = deg - 90.0                                  # turn apex from up to `deg`
+    ids = []
+    for a in base:
+        th = math.radians(a + rot)
+        # squash laterally (perpendicular to the metal->centroid spine) for tilt
+        ux, uy = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+        px, py = r * math.cos(th), r * math.sin(th)
+        along = px * ux + py * uy
+        perp = -px * uy + py * ux
+        perp *= squash
+        ids.append(sc.atom((cx + along * ux - perp * uy,
+                            cy + along * uy + perp * ux)))
+    n = len(ids)
+    # the edge nearest the metal is drawn BOLD (front), its two neighbours taper.
+    order_by_dist = sorted(range(n),
+                           key=lambda k: (sc.atoms[ids[k]].pos[0] - cx) *
+                           math.cos(math.radians(deg)) +
+                           (sc.atoms[ids[k]].pos[1] - cy) * math.sin(math.radians(deg)))
+    near = set(order_by_dist[:2])                     # two vertices closest to metal
+    for k in range(n):
+        a, b = ids[k], ids[(k + 1) % n]
+        ka, kb = k in near, (k + 1) % n in near
+        if ka and kb:
+            sc.bond(a, b, order=1, kind="bold")
+        elif ka or kb:
+            sc.bond(a, b, order=1, kind="taper", width=_CPW_BIG)
+        else:
+            sc.bond(a, b, order=1)
+    sc.ring_circle(ids, r_frac=0.58)
+    cen = sc.atom((cx, cy), label="", halo=False)
+    return ids, cen
+
+
+def build_bent_metallocene(name, metal_label, ancillary, metal_col=None,
+                           bend_deg=68.0, gap=1.85, squash=0.62, anc_len=1.05):
+    """A BENT metallocene Cp2M(X)n -- two Cp discs opened into a clamshell with the
+    metal at the vertex and `ancillary` sigma ligands (e.g. ['Cl','Cl'] for
+    Cp2ZrCl2) fanning out below.  Built from the ferrocene perspective-Cp drawing
+    (the requested 'starting point').  The two Cp rings + centroids + metal freeze
+    into one rigid body (the metal is also the pinned centre, so the whole core is
+    held in the hand-placed bent geometry); only the ancillary arms relax.
+    Returns (sc, name, meta) with meta carrying the metal id for Harness(metal=)."""
+    sc = Scene()
+    mx, my = 2.6, 0.0
+    half = bend_deg / 2.0
+    left_deg, right_deg = 90.0 + half, 90.0 - half     # centroid directions (up V)
+    lc = polar((mx, my), left_deg, gap * L)
+    rc = polar((mx, my), right_deg, gap * L)
+    left, cl_anchor = _bent_cp_ring(sc, lc, left_deg, squash=squash)
+    right, cr_anchor = _bent_cp_ring(sc, rc, right_deg, squash=squash)
+    metal = sc.atom((mx, my), label=metal_label, color=metal_col or MET_COL)
+    sc.bond(metal, cl_anchor, order=1, kind="coord")   # eta5 dashed
+    sc.bond(metal, cr_anchor, order=1, kind="coord")
+    # ancillary sigma ligands fan out below the metal, centred on -y
+    nx = len(ancillary)
+    spread = 56.0
+    for k, lbl in enumerate(ancillary):
+        a = (270.0 - spread / 2.0 + spread * k / max(1, nx - 1)) if nx > 1 else 270.0
+        tip = polar((mx, my), a, anc_len * L)
+        col = COLORS.get(lbl, "#111")
+        xid = sc.atom(tip, label=lbl, color=col)
+        sc.bond(metal, xid, order=1)
+    frozen = {metal, cl_anchor, cr_anchor, *left, *right}
+    meta = {"metal": metal, "exempt": frozen, "extra_rigid": [frozen]}
+    return sc, name, meta
+
+
+def build_metallocene_sandwich(name, metal_label, metal_col=None):
+    """A PARALLEL-sandwich metallocene Cp2M (rhodocene Cp2Rh, ...), the ferrocene
+    depiction re-used verbatim with a different centre.  The whole sandwich is one
+    frozen rigid body; the metal is the pinned centre.  Returns (sc, name, meta)."""
+    sc = Scene()
+    fe, up, dn, cens = _ferrocene_stack(sc, fe_xy=(2.6, 0.0), gap=1.4,
+                                        metal_label=metal_label, metal_col=metal_col)
+    frozen = {fe, *up, *dn, *cens}
+    meta = {"metal": fe, "exempt": frozen, "extra_rigid": [frozen]}
+    return sc, name, meta
 
 
 def _cp_right_vertex(sc, ids, want_up):

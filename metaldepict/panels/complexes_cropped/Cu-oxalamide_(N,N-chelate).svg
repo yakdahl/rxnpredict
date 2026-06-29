@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1040" viewBox="0 0 1240 1040">
+<rect width="1240" height="1040" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-linejoin="round">
+<line x1="646.76" y1="419.28" x2="645.22" y2="446.96" stroke="#111" stroke-width="3.78"/>
+<line x1="653.27" y1="427.00" x2="652.55" y2="440.00" stroke="#111" stroke-width="3.78"/>
+<line x1="645.22" y1="446.96" x2="620.03" y2="461.28" stroke="#111" stroke-width="3.78"/>
+<line x1="594.52" y1="462.66" x2="569.09" y2="451.63" stroke="#111" stroke-width="3.78"/>
+<line x1="569.09" y1="451.63" x2="564.30" y2="409.90" stroke="#111" stroke-width="3.78"/>
+<line x1="564.30" y1="409.90" x2="525.77" y2="393.19" stroke="#111" stroke-width="3.78"/>
+<line x1="525.77" y1="393.19" x2="492.03" y2="418.20" stroke="#111" stroke-width="3.78"/>
+<line x1="492.03" y1="418.20" x2="496.82" y2="459.93" stroke="#111" stroke-width="3.78"/>
+<line x1="496.82" y1="459.93" x2="535.35" y2="476.64" stroke="#111" stroke-width="3.78"/>
+<line x1="645.22" y1="446.96" x2="681.67" y2="473.43" stroke="#111" stroke-width="3.78"/>
+<line x1="681.67" y1="473.43" x2="707.52" y2="463.42" stroke="#111" stroke-width="3.78"/>
+<line x1="686.02" y1="464.32" x2="698.16" y2="459.61" stroke="#111" stroke-width="3.78"/>
+<line x1="681.67" y1="473.43" x2="675.83" y2="501.82" stroke="#111" stroke-width="3.78"/>
+<line x1="682.41" y1="526.51" x2="700.76" y2="547.29" stroke="#111" stroke-width="3.78"/>
+<line x1="700.76" y1="547.29" x2="687.40" y2="587.10" stroke="#111" stroke-width="3.78"/>
+<line x1="687.40" y1="587.10" x2="715.20" y2="618.58" stroke="#111" stroke-width="3.78"/>
+<line x1="715.20" y1="618.58" x2="756.37" y2="610.24" stroke="#111" stroke-width="3.78"/>
+<line x1="756.37" y1="610.24" x2="769.73" y2="570.42" stroke="#111" stroke-width="3.78"/>
+<line x1="769.73" y1="570.42" x2="741.92" y2="538.95" stroke="#111" stroke-width="3.78"/>
+<line x1="535.35" y1="476.64" x2="569.09" y2="451.63" stroke="#111" stroke-width="3.78"/>
+<line x1="741.92" y1="538.95" x2="700.76" y2="547.29" stroke="#111" stroke-width="3.78"/>
+<line x1="610.95" y1="482.23" x2="615.11" y2="499.58" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="658.72" y1="516.93" x2="640.93" y2="518.34" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="607.66" y1="536.99" x2="599.76" y2="547.86" stroke="#111" stroke-width="3.78"/>
+</g>
+<text x="647.56" y="405.02" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">O</text>
+<text x="647.56" y="405.02" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c0392b">O</text>
+<text x="607.62" y="468.34" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">N</text>
+<text x="607.62" y="468.34" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2c3e9e">N</text>
+<text x="720.83" y="458.25" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">O</text>
+<text x="720.83" y="458.25" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c0392b">O</text>
+<text x="672.96" y="515.81" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">N</text>
+<text x="672.96" y="515.81" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2c3e9e">N</text>
+<text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cu</text>
+<text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#b05a2a">Cu</text>
+<text x="587.42" y="564.85" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Br</text>
+<text x="587.42" y="564.85" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#8b4513">Br</text>
+</svg>

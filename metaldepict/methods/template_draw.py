@@ -254,6 +254,22 @@ class Scene:
                     out.append(f'<line x1="{qa[0]:.2f}" y1="{qa[1]:.2f}" '
                                f'x2="{qb[0]:.2f}" y2="{qb[1]:.2f}" '
                                f'stroke="{col}" stroke-width="{bw:.2f}"/>')
+                elif bd.order == 3:
+                    # triple bond (e.g. a metal carbonyl C#O): the centre line
+                    # above plus a symmetric flanking line on EACH side.
+                    d = vnorm(vsub(B2, A2))
+                    pr = perp(d)
+                    sh = DOUBLE_SHRINK
+                    gap = DOUBLE_GAP * 1.15
+                    for sgn in (1, -1):
+                        iA = (A2[0] + sgn * pr[0] * gap + d[0] * sh,
+                              A2[1] + sgn * pr[1] * gap + d[1] * sh)
+                        iB = (B2[0] + sgn * pr[0] * gap - d[0] * sh,
+                              B2[1] + sgn * pr[1] * gap - d[1] * sh)
+                        qa, qb = tx(iA), tx(iB)
+                        out.append(f'<line x1="{qa[0]:.2f}" y1="{qa[1]:.2f}" '
+                                   f'x2="{qb[0]:.2f}" y2="{qb[1]:.2f}" '
+                                   f'stroke="{col}" stroke-width="{bw:.2f}"/>')
 
         out.append('</g>')
 
