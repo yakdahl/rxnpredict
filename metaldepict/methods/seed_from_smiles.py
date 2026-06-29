@@ -328,13 +328,14 @@ def _aryl_para(sc, pid, deg, para_label, kek=0):
     return ids
 
 
-def _aryl_35(sc, pid, deg, label, kek=0):
+def _aryl_35(sc, pid, deg, label, kek=0, ring_scale=1.0):
     """Place a phenyl ring on P carrying TWO meta (3,5) substituent labels --
-    e.g. a bis-3,5-(CF3)2-phenyl P-aryl."""
+    e.g. a bis-3,5-(CF3)2-phenyl P-aryl.  `ring_scale` shrinks the hexagon (the
+    P-aryl bond stays L) so the ring can be matched to a smaller reference ring."""
     p = sc.atoms[pid].pos
     ipso = polar(p, deg, L)
-    center = polar(ipso, deg, _MT.HEX_R)
-    ids = _MT.place_hexagon(sc, center, deg + 180.0, kek)
+    center = polar(ipso, deg, _MT.HEX_R * ring_scale)
+    ids = _MT.place_hexagon(sc, center, deg + 180.0, kek, scale=ring_scale)
     sc.bond(pid, ids[0], order=1)
     for m in (ids[2], ids[4]):                    # the two meta (3 and 5) carbons
         _MT.text_arm(sc, m, _MT.out_angle(sc, center, m), label,

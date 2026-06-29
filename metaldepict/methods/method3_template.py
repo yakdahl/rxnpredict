@@ -43,13 +43,13 @@ def vlen(a):
 
 
 # ------------------------------------------------------------------------------
-def place_hexagon(sc, center, vertex0_deg, kek_offset=0):
+def place_hexagon(sc, center, vertex0_deg, kek_offset=0, scale=1.0):
     """Place a benzene hexagon. vertex0 is at angle vertex0_deg from centre.
     Kekule doubles drawn inside; kek_offset (0/1) chooses which edges double.
-    Returns list of 6 vertex ids, CCW from vertex0."""
+    `scale` shrinks/grows the ring (edge = scale*L).  Returns 6 vertex ids."""
     ids = []
     for k in range(6):
-        ids.append(sc.atom(polar(center, vertex0_deg + k * 60.0, HEX_R)))
+        ids.append(sc.atom(polar(center, vertex0_deg + k * 60.0, HEX_R * scale)))
     kek = [2, 1, 2, 1, 2, 1] if kek_offset == 0 else [1, 2, 1, 2, 1, 2]
     for k in range(6):
         sc.bond(ids[k], ids[(k + 1) % 6], order=kek[k], inside=center)

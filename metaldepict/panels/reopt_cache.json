@@ -1391,38 +1391,6 @@
    }
   }
  },
- "named::SL-J011-1": {
-  "crossings": 0,
-  "crowd": 0.62,
-  "overlap": 1,
-  "recipe": {
-   "declutter": {
-    "angles": [
-     12,
-     -12,
-     24,
-     -24,
-     36,
-     -36,
-     50,
-     -50,
-     68,
-     -68,
-     85,
-     -85
-    ],
-    "passes": 3
-   },
-   "relief": true,
-   "weights": {
-    "maxiter": 154.40933588004054,
-    "w_angle": 2.737241224045657,
-    "w_bond": 3.7816629477285524,
-    "w_overlap": 29.187590121648142,
-    "w_rigid": 27.759093033778655
-   }
-  }
- },
  "naphthyl__biscf3": {
   "crowd": 0.53,
   "overlap": 0,

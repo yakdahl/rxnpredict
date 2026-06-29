@@ -87,13 +87,69 @@ def _quinoxp():
 
 def _slj011():
     # Josiphos SL-J011-2 motif: P(3,5-(CF3)2-C6H3)2 directly on Cp, CH(CH3)-PtBu2
-    # tether.  The two bis-3,5-CF3 aryls fan down; the two t-Bu fan up-and-right
-    # (well separated, away from Cu) and reach a little further out.
-    p1 = lambda s, pid: (S._aryl_35(s, pid, 200, "CF3"),
-                         S._aryl_35(s, pid, 268, "CF3"))
-    p2 = lambda s, pid: (S._arm(s, pid, 98, "t-Bu", length=1.5),
-                         S._arm(s, pid, 30, "t-Bu", length=1.5))
+    # tether.  Bis-3,5-CF3 aryls shrunk to ~0.82 to match the ferrocene Cp rings
+    # and fanned wide (down-left / down-right) so they do not collide; the two
+    # t-Bu fan up-and-right, away from Cu.
+    p1 = lambda s, pid: (S._aryl_35(s, pid, 205, "CF3", ring_scale=0.82),
+                         S._aryl_35(s, pid, 320, "CF3", ring_scale=0.82))
+    p2 = lambda s, pid: (S._arm(s, pid, 65, "t-Bu"),
+                         S._arm(s, pid, 0, "t-Bu"))
     return S.build_josiphos("SL-J011-1", psub_p1=p1, psub_p2=p2)
+
+
+def _push_labels_out(H, labels, factor):
+    """Push selected leaf labels (e.g. t-Bu) on each P donor further out along
+    their P-arm, AFTER relaxing (the relaxer pulls every bond back to L, so the
+    extension must be applied as a post-step to persist)."""
+    for p in H.donors:
+        px, py = H.pos[p]
+        for n in list(H.adj[p]):
+            if H.label.get(n) not in labels:
+                continue
+            comp, stack = {n}, [n]
+            while stack:
+                x = stack.pop()
+                for y in H.adj[x]:
+                    if y == p or y in comp:
+                        continue
+                    comp.add(y)
+                    stack.append(y)
+            dx = (H.pos[n][0] - px) * (factor - 1.0)
+            dy = (H.pos[n][1] - py) * (factor - 1.0)
+            for a in comp:
+                H.pos[a] = (H.pos[a][0] + dx, H.pos[a][1] + dy)
+
+
+def _extend_methyl(H, factor=1.3):
+    """Push the stereocentre CH3 (the wedged methyl) a little further out so the
+    stereo wedge reads clearly."""
+    for i, lbl in H.label.items():
+        if lbl and lbl.startswith("CH") and lbl != "Cu":
+            nb = [n for n in H.adj[i]]
+            if not nb:
+                continue
+            px, py = H.pos[nb[0]]
+            dx = (H.pos[i][0] - px) * (factor - 1.0)
+            dy = (H.pos[i][1] - py) * (factor - 1.0)
+            H.pos[i] = (H.pos[i][0] + dx, H.pos[i][1] + dy)
+
+
+def _slj011_H():
+    # build + relax + the relief CLEAN-UP steps (swing / settle / declutter /
+    # uncross) but WITHOUT the tilt, so both bis-CF3 aryls stay flat and the same
+    # size as each other and the Cp rings.
+    sc, title, meta = _slj011()
+    H = R.Harness(scene=sc, title=title,
+                  exempt=meta["exempt"], extra_rigid=meta["extra_rigid"])
+    G.apply_recipe(H, {"weights": dict(G.GLOBAL)})
+    R.swing_off_backbone(H)
+    bodies, pin, inv, translate, _ = R.body_helpers(H)
+    R.overlap_relax(H, bodies, pin, inv, translate, w_over=0.5, iters=80)
+    R.declutter(H, angles=R.BIG_DECL, passes=2)
+    R.uncross(H)
+    _push_labels_out(H, {"t-Bu"}, 1.7)           # t-Bu further out
+    _extend_methyl(H, 1.3)
+    return H
 
 
 def named():
@@ -109,7 +165,7 @@ def named():
     out["(S,S)-QuinoxP*"] = _quinoxp()
     out["(R,R)-Me-DuPhos"] = _smiles_H(
         "C[C@@H]1CC[C@@H](C)[P]1c1ccccc1[P]1[C@H](C)CC[C@H]1C", "(R,R)-Me-DuPhos")
-    out["SL-J011-1"] = _frozen_H(_slj011, "SL-J011-1")
+    out["SL-J011-1"] = _slj011_H()
     out["DTBM-BINAP"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["binap"], G.SUBSTITUENTS["dtbm"]),
         "DTBM-BINAP")
