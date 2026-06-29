@@ -2,7 +2,7 @@
 <rect width="1180" height="980" fill="#ffffff"/>
 <g stroke-linecap="round" stroke-linejoin="round">
 <line x1="681.29" y1="298.43" x2="720.51" y2="318.37" stroke="#111" stroke-width="3.96"/>
-<line x1="720.51" y1="318.37" x2="741.79" y2="298.99" stroke="#111" stroke-width="7.52"/>
+<polygon points="740.46,297.52 717.99,315.61 723.03,321.14 743.13,300.45" fill="#111"/>
 <line x1="741.79" y1="298.99" x2="758.30" y2="323.34" stroke="#111" stroke-width="3.96"/>
 <line x1="758.30" y1="323.34" x2="800.94" y2="312.75" stroke="#111" stroke-width="3.96"/>
 <line x1="758.30" y1="323.34" x2="753.53" y2="367.07" stroke="#111" stroke-width="3.96"/>
@@ -54,7 +54,7 @@
 <polygon points="730.60,592.41 712.64,615.81 718.84,620.00 733.88,594.63" fill="#111"/>
 <line x1="715.74" y1="617.91" x2="720.51" y2="661.63" stroke="#111" stroke-width="7.52"/>
 <line x1="720.51" y1="661.63" x2="681.28" y2="681.58" stroke="#111" stroke-width="3.96"/>
-<line x1="720.51" y1="661.63" x2="741.79" y2="681.02" stroke="#111" stroke-width="7.52"/>
+<polygon points="743.12,679.55 723.03,658.87 717.99,664.40 740.46,682.48" fill="#111"/>
 <line x1="741.79" y1="681.02" x2="758.30" y2="656.66" stroke="#111" stroke-width="3.96"/>
 <line x1="758.30" y1="656.66" x2="800.94" y2="667.26" stroke="#111" stroke-width="3.96"/>
 <line x1="758.30" y1="656.66" x2="753.53" y2="612.93" stroke="#111" stroke-width="3.96"/>

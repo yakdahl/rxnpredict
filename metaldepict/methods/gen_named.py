@@ -49,15 +49,18 @@ def _frozen_H(builder, key):
     return H
 
 
-def _extend_p_leaves(H, factor=1.5):
-    """Push every leaf substituent on a P donor (methyl, t-Bu, ... -- anything not
-    in a ring and not the metal) radially further out, lengthening the P-arm so a
-    stereo wedge / dash drawn on it is clearly visible."""
+def _extend_p_leaves(H, out_factor=1.7, in_factor=0.82):
+    """Rescale leaf substituents on each P donor along their P-arm: the arm that
+    carries the stereo WEDGE / DASH is pushed OUT (out_factor) so the stereo is
+    clearly visible, while a plain arm (e.g. the methyl) is pulled IN (in_factor)
+    so it does not stick out.  Ring substituents and the metal are left alone."""
     for p in H.donors:
         px, py = H.pos[p]
         for n in H.adj[p]:
             if H.label[n] == "Cu" or any(n in r for r in H.rings):
                 continue
+            kind = H.kind.get(frozenset((p, n)), "plain")
+            factor = out_factor if kind in ("wedge", "dash") else in_factor
             comp, stack = {n}, [n]
             while stack:
                 x = stack.pop()
@@ -73,12 +76,12 @@ def _extend_p_leaves(H, factor=1.5):
 
 
 def _quinoxp():
-    # (S,S)-QuinoxP*: two P-stereocentres (RDKit wedges the P-Me bond on one, dashes
-    # it on the other -> the S,S display).  Extend the P-Me / P-tBu arms so those
-    # wedges / dashes are clearly visible.
+    # (S,S)-QuinoxP*: two P-stereocentres -- RDKit wedges the P-tBu bond on one
+    # centre and dashes it on the other (the S,S display).  Push the t-Bu (wedge/
+    # dash) arms OUT so the stereo is clear, and pull the plain methyls back IN.
     H = _smiles_H("C[P@@](C(C)(C)C)c1nc2ccccc2nc1[P@@](C)C(C)(C)C",
                   "(S,S)-QuinoxP*")
-    _extend_p_leaves(H, 1.55)
+    _extend_p_leaves(H, out_factor=1.7, in_factor=0.8)
     return H
 
 

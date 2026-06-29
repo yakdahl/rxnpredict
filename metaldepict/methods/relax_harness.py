@@ -687,7 +687,10 @@ def _restyle_tilted_ring(H, ring, perp):
     # rotate the edge list so a run of near-side edges does not wrap the seam
     start = next((i for i in range(len(edges)) if not near[i]), 0)
     order = [(start + k) % len(edges) for k in range(len(edges))]
-    run = False
+    # within a run of near edges ALTERNATE taper, bold, taper, ... -- so a run
+    # starts and ends with a taper and a bold is always flanked by tapers (never
+    # a dangling bold whose far end touches no wedge).
+    run_idx = 0
     for i in order:
         e = edges[i]
         bd = bonds.get(frozenset(e))
@@ -696,19 +699,19 @@ def _restyle_tilted_ring(H, ring, perp):
         bd.order = 1
         bd.inside = None
         if near[i]:
-            if run:                              # a wedge already feeds this one
+            if run_idx % 2 == 1:                 # interior of the run -> bold
                 bd.kind = "bold"
                 bd.width = None
-            else:                                # first wedge of the run -> taper
+            else:                                # run ends (and start) -> taper
                 lo, hi = (e[0], e[1]) if depth[e[0]] <= depth[e[1]] else (e[1], e[0])
                 bd.a, bd.b = lo, hi              # narrow at far vertex, wide toward viewer
                 bd.kind = "taper"
                 bd.width = 0.17 * L
-            run = True
+            run_idx += 1
         else:
             bd.kind = "plain"
             bd.width = None
-            run = False
+            run_idx = 0
     H.scene.ring_circle(list(ring), r_frac=0.58)
 
 

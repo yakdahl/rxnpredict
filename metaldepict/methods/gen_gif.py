@@ -54,6 +54,25 @@ def main():
     have = {(c["backbone"], c["sub"]): c["png"] for c in idx["cells"]}
     order = [bs for bs in snake_order(backbones, subs) if bs in have]
 
+    # common crop window = union of every cell's MOLECULE ink bbox, so whitespace
+    # is trimmed identically across frames and Cu-H stays locked.  The per-cell
+    # title sits in the top-left corner; ignore that band (the GIF draws its own
+    # label bar) or it would stretch the crop all the way to the title.
+    from PIL import ImageChops, ImageDraw as _ID
+    imgs = {k: Image.open(v).convert("RGB") for k, v in have.items()}
+    title_band = 70
+    x0 = y0 = 10 ** 9
+    x1 = y1 = 0
+    for im in imgs.values():
+        c = im.copy()
+        _ID.Draw(c).rectangle([0, 0, c.width, title_band], fill="white")
+        bb = ImageChops.difference(c, Image.new("RGB", c.size, "white")).getbbox()
+        if bb:
+            x0, y0 = min(x0, bb[0]), min(y0, bb[1])
+            x1, y1 = max(x1, bb[2]), max(y1, bb[3])
+    pad = 18
+    crop = (max(0, x0 - pad), max(0, y0 - pad), x1 + pad, y1 + pad)
+
     frames = []
     target_w = 940
     try:
@@ -62,7 +81,7 @@ def main():
     except Exception:
         font = ImageFont.load_default()
     for bk, sb in order:
-        im = Image.open(have[(bk, sb)]).convert("RGB")
+        im = imgs[(bk, sb)].crop(crop)
         scale = target_w / im.width
         im = im.resize((target_w, int(im.height * scale)))
         d = ImageDraw.Draw(im)
