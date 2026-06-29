@@ -86,20 +86,68 @@ def ligand_smiles(core_smiles, sub_smiles):
     return Chem.MolToSmiles(mol)
 
 
+def _score(H):
+    m = H.metrics()
+    return (m["overlap"], round(m.get("crowd", 0.0), 2), round(m["bondCV"], 3))
+
+
+def best_relax(fresh, allow_de=True):
+    """Try several layout strategies on a freshly-built Harness (fresh() returns
+    a new H each call) and keep the one with the fewest overlaps (then least
+    crowding).  Cheap strategies first; per-scene weight re-optimisation only if
+    overlaps remain."""
+    cands = []
+
+    def add(H):
+        cands.append(H)
+        return _score(H)
+
+    H = fresh()
+    relaxer_energy.relax(H, GLOBAL)
+    if add(H)[0] == 0:
+        return min(cands, key=_score)
+    # strong overlap + aggressive declutter
+    BIG = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
+    H = fresh()
+    relaxer_energy.relax(H, dict(GLOBAL, w_overlap=30.0, w_rigid=72.0, maxiter=200))
+    R.declutter(H, angles=BIG, passes=3)
+    add(H)
+    # + a rigid-body overlap push, then declutter again
+    H = fresh()
+    relaxer_energy.relax(H, dict(GLOBAL, w_overlap=34.0, w_rigid=72.0, maxiter=200))
+    R.declutter(H, angles=BIG, passes=3)
+    bo, pin, inv, tr, _ = R.body_helpers(H)
+    R.overlap_relax(H, bo, pin, inv, tr, w_over=0.6, iters=140)
+    R.declutter(H, angles=BIG, passes=2)
+    add(H)
+    # per-scene differential-evolution of the energy weights for the stubborn ones
+    if allow_de and min(_score(c)[0] for c in cands) > 2:
+        from scipy.optimize import differential_evolution
+
+        def obj(x):
+            h = fresh()
+            relaxer_energy.relax(h, dict(zip(relaxer_energy.PARAM_NAMES, x)))
+            return R.quality_loss(h)
+        try:
+            res = differential_evolution(obj, relaxer_energy.BOUNDS, maxiter=8,
+                                         seed=0, popsize=8, polish=False, tol=1e-3)
+            H = fresh()
+            relaxer_energy.relax(H, dict(zip(relaxer_energy.PARAM_NAMES, res.x)))
+            R.declutter(H, angles=BIG, passes=3)
+            add(H)
+        except Exception:
+            pass
+    return min(cands, key=_score)
+
+
 def relaxed_cell(backbone, sub):
     smi = ligand_smiles(BACKBONES[backbone], SUBSTITUENTS[sub])
-    sc, _ = S.scene_from_smiles(smi, f"{backbone}_{sub}")
-    H = R.Harness(scene=sc, title=f"{backbone}_{sub}")
-    relaxer_energy.relax(H, GLOBAL)
-    weights = GLOBAL
-    if H.metrics()["overlap"] > 0:               # only the crowded cells re-tune
-        sc2, _ = S.scene_from_smiles(smi, f"{backbone}_{sub}")
-        H = R.Harness(scene=sc2, title=f"{backbone}_{sub}")
-        weights = dict(GLOBAL, w_overlap=30.0, w_rigid=72.0, maxiter=200)
-        relaxer_energy.relax(H, weights)
-        if H.metrics()["overlap"] > 0:           # slight in-place rotations last
-            R.declutter(H)
-    return H, smi, weights
+
+    def fresh():
+        sc, _ = S.scene_from_smiles(smi, f"{backbone}_{sub}")
+        return R.Harness(scene=sc, title=f"{backbone}_{sub}")
+    H = best_relax(fresh)
+    return H, smi, GLOBAL
 
 
 def render_cell(backbone, sub, outdir):

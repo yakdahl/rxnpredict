@@ -30,17 +30,10 @@ CANVAS, SCALE, ANCHOR = (1180, 980), 44.0, (740.0, 490.0)
 
 
 def _smiles_H(smi, name):
-    sc, _ = S.scene_from_smiles(smi, name)
-    H = R.Harness(scene=sc, title=name)
-    relaxer_energy.relax(H, GLOBAL)
-    if H.metrics()["overlap"] > 0:
-        sc2, _ = S.scene_from_smiles(smi, name)
-        H = R.Harness(scene=sc2, title=name)
-        relaxer_energy.relax(H, dict(GLOBAL, w_overlap=30.0, w_rigid=72.0,
-                                     maxiter=200))
-        if H.metrics()["overlap"] > 0:
-            R.declutter(H)
-    return H
+    def fresh():
+        sc, _ = S.scene_from_smiles(smi, name)
+        return R.Harness(scene=sc, title=name)
+    return G.best_relax(fresh)
 
 
 def _frozen_H(builder):
