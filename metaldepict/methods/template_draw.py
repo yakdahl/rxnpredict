@@ -78,6 +78,7 @@ class Bond:
     order: int = 1
     kind: str = "plain"      # plain | wedge | dash | dative | bold
     inside: tuple = None
+    width: float = None      # override wedge wide-end half-width (world units)
 
 
 @dataclass
@@ -97,8 +98,8 @@ class Scene:
     def move(self, i, pos):
         self.atoms[i].pos = pos
 
-    def bond(self, a, b, order=1, kind="plain", inside=None):
-        self.bonds.append(Bond(a, b, order, kind, inside))
+    def bond(self, a, b, order=1, kind="plain", inside=None, width=None):
+        self.bonds.append(Bond(a, b, order, kind, inside, width))
 
     def ring_circle(self, vertex_ids, r_frac=0.62):
         """An aromatic-ring circle inscribed in the ring of `vertex_ids`; centre
@@ -183,7 +184,7 @@ class Scene:
             if bd.kind == "wedge":
                 d = vnorm(vsub(pb, pa))
                 pr = perp(d)
-                w = WEDGE_WIDE * scale
+                w = (bd.width if bd.width is not None else WEDGE_WIDE) * scale
                 p1 = (pa[0], pa[1])
                 p2 = (pb[0] + pr[0] * w / 2, pb[1] + pr[1] * w / 2)
                 p3 = (pb[0] - pr[0] * w / 2, pb[1] - pr[1] * w / 2)

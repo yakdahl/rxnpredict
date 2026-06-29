@@ -29,20 +29,23 @@ GLOBAL = G.GLOBAL
 CANVAS, SCALE, ANCHOR = (1180, 980), 44.0, (740.0, 490.0)
 
 
+_CACHE = {}
+
+
 def _smiles_H(smi, name):
     def fresh():
         sc, _ = S.scene_from_smiles(smi, name)
         return R.Harness(scene=sc, title=name)
-    return G.best_relax(fresh)
+    H, _ = G.best_relax(fresh, key=f"named::{name}", cache=_CACHE)
+    return H
 
 
-def _frozen_H(builder):
-    sc, title, meta = builder()
-    H = R.Harness(scene=sc, title=title,
-                  exempt=meta["exempt"], extra_rigid=meta["extra_rigid"])
-    relaxer_energy.relax(H, GLOBAL)
-    if H.metrics()["overlap"] > 0:
-        R.declutter(H)
+def _frozen_H(builder, key):
+    def fresh():
+        sc, title, meta = builder()
+        return R.Harness(scene=sc, title=title,
+                         exempt=meta["exempt"], extra_rigid=meta["extra_rigid"])
+    H, _ = G.best_relax(fresh, key=f"named::{key}", cache=_CACHE)
     return H
 
 
@@ -69,7 +72,7 @@ def named():
         "C[P@@](C(C)(C)C)c1nc2ccccc2nc1[P@@](C)C(C)(C)C", "(S,S)-QuinoxP*")
     out["(R,R)-Me-DuPhos"] = _smiles_H(
         "C[C@@H]1CC[C@@H](C)[P]1c1ccccc1[P]1[C@H](C)CC[C@H]1C", "(R,R)-Me-DuPhos")
-    out["SL-J011-1"] = _frozen_H(_slj011)
+    out["SL-J011-1"] = _frozen_H(_slj011, "SL-J011-1")
     out["DTBM-BINAP"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["binap"], G.SUBSTITUENTS["dtbm"]),
         "DTBM-BINAP")
@@ -98,7 +101,10 @@ FIG2 = ["(3,5-tBu2C6H3)-DPPBz", "(3-Oct-thienyl)-DPPBz",
 def main():
     outdir = HERE / "out" / "named"
     outdir.mkdir(parents=True, exist_ok=True)
+    global _CACHE
+    _CACHE = G.load_cache()
     Hs = named()
+    G.save_cache(_CACHE)
     svgs, pngs, label = [], [], {}
     for nm, H in Hs.items():
         H.commit()

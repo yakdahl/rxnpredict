@@ -210,33 +210,37 @@ _PEN_R = L / (2 * math.sin(math.pi / 5))
 _APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
-def _cp_ring(sc, center, apex_deg, squash=1.0):
-    """Cyclopentadienyl ring drawn the REFERENCE way: a flattened pentagon with
-    an inscribed aromatic circle.  The two FRONT edges (the ones nearest Fe, at
-    the apex) are BOLD so the disc reads as tilting out of the plane; the back
-    edges are normal weight.  `apex_deg` rotates in place; `squash` (<1) tilts."""
+_CPW = 0.13 * L          # narrow wedge half-width for the Cp perspective edges
+
+
+def _cp_ring(sc, center, squash=0.6):
+    """Cyclopentadienyl ring drawn in perspective (classic DPPF style): a
+    vertically-squashed pentagon, apex UP, with an inscribed aromatic circle.
+    The bottom FRONT edge is a plain bond; the two edges adjacent to it are thin
+    WEDGES (wide at the front, narrowing back) so the disc reads as tilting out
+    of the plane; the two back edges are plain.  Both rings use the SAME tilt.
+    Vertices (CCW from apex): apex, ML, BL, BR, MR.  Returns the 5 ids."""
     cx, cy = center
-    ids = []
-    for k in range(5):
-        a = math.radians(apex_deg + k * 72.0)
-        ids.append(sc.atom((cx + _PEN_R * math.cos(a),
-                            cy + _PEN_R * math.sin(a) * squash)))
-    front = {0, 4}                                    # edges incident to apex (id0)
-    for k in range(5):
-        sc.bond(ids[k], ids[(k + 1) % 5], order=1,
-                kind="bold" if k in front else "plain")
-    sc.ring_circle(ids, r_frac=0.6)                   # aromatic circle
+    ang = [90, 162, 234, 306, 18]                     # apex, ML, BL, BR, MR
+    ids = [sc.atom((cx + _PEN_R * math.cos(math.radians(a)),
+                    cy + _PEN_R * math.sin(math.radians(a)) * squash)) for a in ang]
+    apex, ml, bl, br, mr = ids
+    sc.bond(bl, br, order=1)                           # FRONT bottom edge -> plain
+    sc.bond(ml, bl, order=1, kind="wedge", width=_CPW)   # wide at BL (front)
+    sc.bond(mr, br, order=1, kind="wedge", width=_CPW)   # wide at BR (front)
+    sc.bond(apex, ml, order=1)                         # back edges -> plain
+    sc.bond(mr, apex, order=1)
+    sc.ring_circle(ids, r_frac=0.58)
     return ids
 
 
-def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.18, squash=0.55):
-    """Reference-style vertical SANDWICH: two Cp discs (apex toward Fe), each with
-    an inscribed circle and BOLD front edges for the tilt, Fe labelled in the
-    centre, and the eta5 drawn as a DASHED line from Fe to the apex carbon of each
-    ring.  Returns (fe, upper_ids, lower_ids)."""
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25, squash=0.6):
+    """Reference-style SANDWICH with both Cp discs tilted the SAME way (apex up):
+    upper ring above Fe, lower ring below, Fe labelled in the centre, eta5 drawn
+    as a DASHED line from Fe to the near carbon of each ring."""
     fx, fy = fe_xy
-    up = _cp_ring(sc, (fx, fy + gap), apex_deg=270.0, squash=squash)  # apex down
-    dn = _cp_ring(sc, (fx, fy - gap), apex_deg=90.0, squash=squash)   # apex up
+    up = _cp_ring(sc, (fx, fy + gap), squash=squash)
+    dn = _cp_ring(sc, (fx, fy - gap), squash=squash)
     fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
     for ids in (up, dn):                              # eta5: dashed Fe-Cp
         near = min(ids, key=lambda i: math.hypot(

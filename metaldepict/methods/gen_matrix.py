@@ -15,6 +15,7 @@ grid in matrix_index.json.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -91,67 +92,106 @@ def _score(H):
     return (m["overlap"], round(m.get("crowd", 0.0), 2), round(m["bondCV"], 3))
 
 
-def best_relax(fresh, allow_de=True):
-    """Try several layout strategies on a freshly-built Harness (fresh() returns
-    a new H each call) and keep the one with the fewest overlaps (then least
-    crowding).  Cheap strategies first; per-scene weight re-optimisation only if
-    overlaps remain."""
-    cands = []
+BIG = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
+ACCEPT = 2                                   # <= this many overlaps "works well"
+CACHE_PATH = HERE.parent / "panels" / "reopt_cache.json"
 
-    def add(H):
-        cands.append(H)
-        return _score(H)
 
-    H = fresh()
-    relaxer_energy.relax(H, GLOBAL)
-    if add(H)[0] == 0:
-        return min(cands, key=_score)
-    # strong overlap + aggressive declutter
-    BIG = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
-    H = fresh()
-    relaxer_energy.relax(H, dict(GLOBAL, w_overlap=30.0, w_rigid=72.0, maxiter=200))
-    R.declutter(H, angles=BIG, passes=3)
-    add(H)
-    # + a rigid-body overlap push, then declutter again
-    H = fresh()
-    relaxer_energy.relax(H, dict(GLOBAL, w_overlap=34.0, w_rigid=72.0, maxiter=200))
-    R.declutter(H, angles=BIG, passes=3)
-    bo, pin, inv, tr, _ = R.body_helpers(H)
-    R.overlap_relax(H, bo, pin, inv, tr, w_over=0.6, iters=140)
-    R.declutter(H, angles=BIG, passes=2)
-    add(H)
-    # per-scene differential-evolution of the energy weights for the stubborn ones
-    if allow_de and min(_score(c)[0] for c in cands) > 2:
-        from scipy.optimize import differential_evolution
+def load_cache():
+    try:
+        return json.loads(CACHE_PATH.read_text())
+    except Exception:
+        return {}
 
-        def obj(x):
-            h = fresh()
-            relaxer_energy.relax(h, dict(zip(relaxer_energy.PARAM_NAMES, x)))
-            return R.quality_loss(h)
+
+def save_cache(cache):
+    CACHE_PATH.write_text(json.dumps(cache, indent=1, sort_keys=True))
+
+
+def apply_recipe(H, rec):
+    """Deterministically reproduce a cached layout: relax with the recipe's
+    weights, then its declutter / overlap-push steps (declutter is greedy and
+    deterministic, so this exactly reproduces the cached result -- no search)."""
+    relaxer_energy.relax(H, rec["weights"])
+    dc = rec.get("declutter")
+    if dc:
+        R.declutter(H, angles=tuple(dc["angles"]), passes=dc["passes"])
+    if rec.get("push"):
+        bo, pin, inv, tr, _ = R.body_helpers(H)
+        R.overlap_relax(H, bo, pin, inv, tr, w_over=0.6, iters=140)
+        dc2 = rec.get("declutter2")
+        if dc2:
+            R.declutter(H, angles=tuple(dc2["angles"]), passes=dc2["passes"])
+
+
+def _strategies():
+    """Cheap-to-expensive layout recipes (no DE)."""
+    yield {"weights": dict(GLOBAL)}
+    yield {"weights": dict(GLOBAL, w_overlap=30.0, w_rigid=72.0, maxiter=200),
+           "declutter": {"angles": list(BIG), "passes": 3}}
+    yield {"weights": dict(GLOBAL, w_overlap=34.0, w_rigid=72.0, maxiter=200),
+           "declutter": {"angles": list(BIG), "passes": 3}, "push": True,
+           "declutter2": {"angles": list(BIG), "passes": 2}}
+
+
+def best_relax(fresh, key=None, cache=None, force=False):
+    """Pick the lowest-overlap layout.  If a recipe for `key` is cached, REPLAY
+    it cheaply (deterministic relax + declutter -- no strategy search, no DE),
+    REGARDLESS of how good it is, so the costly search runs ONCE per cell, not
+    every regeneration.  The full search (+ per-scene differential-evolution for
+    the stubborn ones) runs only on a cache miss or when `force` is set; the
+    winning recipe is then cached."""
+    if cache is not None and key in cache and not force:
+        H = fresh()
+        apply_recipe(H, cache[key]["recipe"])
+        return H, cache[key]["recipe"]
+
+    best = best_rec = None
+    for rec in _strategies():
+        H = fresh()
+        apply_recipe(H, rec)
+        if best is None or _score(H) < _score(best):
+            best, best_rec = H, rec
+        if _score(H)[0] == 0:
+            break
+    if _score(best)[0] > ACCEPT:                       # full reopt only for the poor
         try:
+            from scipy.optimize import differential_evolution
+
+            def obj(x):
+                h = fresh()
+                relaxer_energy.relax(h, dict(zip(relaxer_energy.PARAM_NAMES, x)))
+                return R.quality_loss(h)
             res = differential_evolution(obj, relaxer_energy.BOUNDS, maxiter=8,
                                          seed=0, popsize=8, polish=False, tol=1e-3)
+            rec = {"weights": dict(zip(relaxer_energy.PARAM_NAMES,
+                                       [float(v) for v in res.x])),
+                   "declutter": {"angles": list(BIG), "passes": 3}}
             H = fresh()
-            relaxer_energy.relax(H, dict(zip(relaxer_energy.PARAM_NAMES, res.x)))
-            R.declutter(H, angles=BIG, passes=3)
-            add(H)
+            apply_recipe(H, rec)
+            if _score(H) < _score(best):
+                best, best_rec = H, rec
         except Exception:
             pass
-    return min(cands, key=_score)
+    if cache is not None and key is not None:
+        m = best.metrics()
+        cache[key] = {"recipe": best_rec, "overlap": m["overlap"],
+                      "crowd": round(m.get("crowd", 0.0), 2)}
+    return best, best_rec
 
 
-def relaxed_cell(backbone, sub):
+def relaxed_cell(backbone, sub, cache=None):
     smi = ligand_smiles(BACKBONES[backbone], SUBSTITUENTS[sub])
 
     def fresh():
         sc, _ = S.scene_from_smiles(smi, f"{backbone}_{sub}")
         return R.Harness(scene=sc, title=f"{backbone}_{sub}")
-    H = best_relax(fresh)
+    H, _ = best_relax(fresh, key=f"{backbone}__{sub}", cache=cache)
     return H, smi, GLOBAL
 
 
-def render_cell(backbone, sub, outdir):
-    H, smi, weights = relaxed_cell(backbone, sub)
+def render_cell(backbone, sub, outdir, cache=None):
+    H, smi, weights = relaxed_cell(backbone, sub, cache=cache)
     H.commit()
     title = f"({PRETTY[sub]}){PRETTY[backbone]}·CuH"
     svg = H.scene.render_svg(CANVAS[0], CANVAS[1], title=title,
@@ -166,11 +206,21 @@ def render_cell(backbone, sub, outdir):
 def main():
     outdir = HERE.parent / "panels" / "matrix"
     outdir.mkdir(parents=True, exist_ok=True)
+    cache = load_cache()
+    # FORCE_POOR=1 -> drop the poorly-doing cells from the cache so ONLY they get
+    # a fresh full reoptimisation; every good cell is still replayed cheaply.
+    if os.environ.get("FORCE_POOR"):
+        poor = [k for k in list(cache) if cache[k]["overlap"] > ACCEPT]
+        for k in poor:
+            del cache[k]
+        print(f"FORCE_POOR: re-optimising {len(poor)} poor cells", flush=True)
+    n_cached = len(cache)
+    print(f"cache: {n_cached} recipes -> replayed cheaply (no search)", flush=True)
     svgs, pngs, index = [], [], []
     for bk in BACKBONES:
         for sb in SUBSTITUENTS:
             try:
-                s, p, m = render_cell(bk, sb, outdir)
+                s, p, m = render_cell(bk, sb, outdir, cache=cache)
                 svgs.append(s)
                 pngs.append(p)
                 index.append({"backbone": bk, "sub": sb, "png": p,
@@ -179,6 +229,7 @@ def main():
                       f"bondCV={m['bondCV']:.3f}", flush=True)
             except Exception as e:
                 print(f"{bk:10s} {sb:13s} ERROR {e}", flush=True)
+    save_cache(cache)
     R._svg_to_png(svgs, pngs)
     (HERE.parent / "panels" / "matrix_index.json").write_text(
         json.dumps({"backbones": list(BACKBONES), "subs": list(SUBSTITUENTS),
