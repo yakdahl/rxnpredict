@@ -454,6 +454,65 @@ DEFAULT_JUDGE = {
 }
 
 
+def fan_substituents(H, margin_deg=22.0):
+    """MERGE step: RDKit gives the connectivity + ring shapes, but clusters the
+    two P-substituents; this re-fans them.  For each P donor, the substituent
+    groups (the small components hanging off P, i.e. not the backbone, not Cu)
+    are rotated about P to spread evenly through the largest free angular gap
+    between the backbone bond and the P->Cu bond.  Whole rigid bodies rotate, so
+    ring shapes are preserved; the energy relax then only has to fix lengths."""
+    bodies, pin, inv, translate, rotate = body_helpers(H)
+    for p in H.donors:
+        nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+        if len(nbrs) < 2:
+            continue
+        # connected component reached from each neighbour with the P-n bond cut
+        comp = {}
+        for n in nbrs:
+            seen = {p, n}
+            stack = [n]
+            while stack:
+                x = stack.pop()
+                for y in H.adj[x]:
+                    if y == p or y in seen or H.label[y] == "Cu":
+                        continue
+                    seen.add(y)
+                    stack.append(y)
+            comp[n] = seen - {p}
+        backbone_n = max(nbrs, key=lambda n: len(comp[n]))
+        subs = [n for n in nbrs if n != backbone_n]
+        if not subs:
+            continue
+
+        def ang(a, b):
+            return math.atan2(H.pos[b][1] - H.pos[a][1],
+                              H.pos[b][0] - H.pos[a][0])
+        a_back = ang(p, backbone_n)
+        a_cu = ang(p, H.metal) if H.metal is not None else a_back + math.pi
+        # the two arcs between a_back and a_cu; fan into the larger one
+        d = (a_cu - a_back) % (2 * math.pi)
+        if d >= math.pi:
+            lo, span = a_back, d
+        else:
+            lo, span = a_cu, 2 * math.pi - d
+        m = math.radians(margin_deg)
+        span = max(0.0, span - 2 * m)
+        k = len(subs)
+        targets = [lo + m + span * (j + 1) / (k + 1) for j in range(k)]
+        # assign each sub to the nearest target (stable), then rotate its body
+        subs_sorted = sorted(subs, key=lambda n: (ang(p, n) - lo) % (2 * math.pi))
+        for n, tgt in zip(subs_sorted, targets):
+            cur = ang(p, n)
+            dth = (tgt - cur + math.pi) % (2 * math.pi) - math.pi
+            c_, s_ = math.cos(dth), math.sin(dth)
+            px, py = H.pos[p]
+            for a in comp[n]:                    # rotate the WHOLE substituent
+                if a in H.pinned:
+                    continue
+                x, y = H.pos[a][0] - px, H.pos[a][1] - py
+                H.pos[a] = (px + c_ * x - s_ * y, py + s_ * x + c_ * y)
+
+
 def quality_loss(H, c=DEFAULT_JUDGE):
     """Scalar numerical quality of a (relaxed) Harness -- lower is better."""
     m = H.metrics()
@@ -577,7 +636,9 @@ const pairs = JSON.parse(process.env.PAIRS);
       args: ['--no-sandbox','--disable-gpu'] });
   for (const [svg, png] of pairs) {
     const s = fs.readFileSync(svg, 'utf8');
-    const p = await b.newPage({ viewport: { width: 760, height: 640 },
+    const mw = s.match(/width="(\d+)"/), mh = s.match(/height="(\d+)"/);
+    const vw = mw ? +mw[1] : 760, vh = mh ? +mh[1] : 640;
+    const p = await b.newPage({ viewport: { width: vw, height: vh },
         deviceScaleFactor: 2 });
     await p.setContent('<!doctype html><body style="margin:0">'+s+'</body>',
         { waitUntil: 'load' });

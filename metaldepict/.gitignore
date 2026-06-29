@@ -5,3 +5,5 @@ __pycache__/
 # extracted transcript images (keep only refs/curated/)
 refs/img_*
 methods/out/
+
+panels/matrix/*.svg

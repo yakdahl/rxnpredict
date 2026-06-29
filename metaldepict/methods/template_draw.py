@@ -116,21 +116,33 @@ class Scene:
 
     # -- SVG output ------------------------------------------------------------
     def render_svg(self, width=760, height=640, pad=0.7, bg="#ffffff",
-                   title=None, title_color="#1a1a1a"):
-        xs = [a.pos[0] for a in self.atoms.values()]
-        ys = [a.pos[1] for a in self.atoms.values()]
-        minx, maxx = min(xs) - pad, max(xs) + pad
-        miny, maxy = min(ys) - pad, max(ys) + pad
-        wspan = maxx - minx
-        hspan = maxy - miny
-        scale = min(width / wspan, height / hspan)
-        offx = (width - wspan * scale) / 2
-        offy = (height - hspan * scale) / 2
+                   title=None, title_color="#1a1a1a",
+                   fixed_scale=None, anchor_world=None, anchor_px=None):
+        # fixed_scale (px per world-unit) + anchor pins a world point to a pixel
+        # point with NO auto-fit, so every image shares one scale and a locked
+        # Cu-H bond -- atoms (incl. Cu/H glyphs) render at identical size.
+        if fixed_scale is not None:
+            scale = fixed_scale
+            aw = anchor_world or (0.0, 0.0)
+            ap = anchor_px or (width / 2.0, height / 2.0)
 
-        def tx(p):
-            X = offx + (p[0] - minx) * scale
-            Y = height - (offy + (p[1] - miny) * scale)
-            return X, Y
+            def tx(p):
+                return ap[0] + (p[0] - aw[0]) * scale, ap[1] - (p[1] - aw[1]) * scale
+        else:
+            xs = [a.pos[0] for a in self.atoms.values()]
+            ys = [a.pos[1] for a in self.atoms.values()]
+            minx, maxx = min(xs) - pad, max(xs) + pad
+            miny, maxy = min(ys) - pad, max(ys) + pad
+            wspan = maxx - minx
+            hspan = maxy - miny
+            scale = min(width / wspan, height / hspan)
+            offx = (width - wspan * scale) / 2
+            offy = (height - hspan * scale) / 2
+
+            def tx(p):
+                X = offx + (p[0] - minx) * scale
+                Y = height - (offy + (p[1] - miny) * scale)
+                return X, Y
 
         bw = BOND_W * scale
         out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" '

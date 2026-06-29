@@ -46,7 +46,11 @@ COLORS = {"P": P_COL, "Cu": CU_COL, "O": O_COL, "Fe": FE_COL,
 LABEL_SYMBOLS = {"P", "O", "N", "S", "B", "Si", "Cu", "Fe", "H", "Cl", "Br", "F"}
 
 _ABBR = rdAbbreviations.ParseAbbreviations(
-    "tBu [*]C(C)(C)C tBu tBu\nOMe [*]OC OMe MeO\nPh [*]c1ccccc1 Ph Ph\n",
+    "tBu [*]C(C)(C)C tBu tBu\n"
+    "OMe [*]OC OMe MeO\n"
+    "CF3 [*]C(F)(F)F CF3 CF3\n"
+    "nOct [*]CCCCCCCC C8H17 C8H17\n"
+    "Ph [*]c1ccccc1 Ph Ph\n",
     True, False)
 
 
