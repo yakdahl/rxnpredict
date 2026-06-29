@@ -122,6 +122,8 @@ def apply_recipe(H, rec):
         dc2 = rec.get("declutter2")
         if dc2:
             R.declutter(H, angles=tuple(dc2["angles"]), passes=dc2["passes"])
+    if rec.get("relief"):                         # swing-off-backbone + tilt-in-plane
+        R.relief_pass(H, squash=rec.get("squash", 0.5))
 
 
 def _strategies():
@@ -173,6 +175,12 @@ def best_relax(fresh, key=None, cache=None, force=False):
                 best, best_rec = H, rec
         except Exception:
             pass
+    if _score(best)[0] > ACCEPT:                       # STILL stubborn -> relief
+        rec = dict(best_rec, relief=True)
+        H = fresh()
+        apply_recipe(H, rec)
+        if _score(H) < _score(best):
+            best, best_rec = H, rec
     if cache is not None and key is not None:
         m = best.metrics()
         cache[key] = {"recipe": best_rec, "overlap": m["overlap"],

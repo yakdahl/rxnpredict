@@ -30,8 +30,8 @@
   }
  },
  "binap__cyclohexyl": {
-  "crowd": 0.77,
-  "overlap": 2,
+  "crowd": 0.85,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -295,8 +295,8 @@
   }
  },
  "dpephos__biscf3": {
-  "crowd": 1.1,
-  "overlap": 3,
+  "crowd": 0.77,
+  "overlap": 1,
   "recipe": {
    "declutter": {
     "angles": [
@@ -333,6 +333,7 @@
     "passes": 2
    },
    "push": true,
+   "relief": true,
    "weights": {
     "maxiter": 200,
     "w_angle": 0.61,
@@ -343,7 +344,7 @@
   }
  },
  "dpephos__cyclohexyl": {
-  "crowd": 0.39,
+  "crowd": 0.47,
   "overlap": 1,
   "recipe": {
    "declutter": {
@@ -391,8 +392,8 @@
   }
  },
  "dpephos__dtbm": {
-  "crowd": 1.69,
-  "overlap": 3,
+  "crowd": 1.15,
+  "overlap": 2,
   "recipe": {
    "declutter": {
     "angles": [
@@ -411,6 +412,7 @@
     ],
     "passes": 3
    },
+   "relief": true,
    "weights": {
     "maxiter": 116.56299124048628,
     "w_angle": 0.003518362325060531,
@@ -482,8 +484,8 @@
   }
  },
  "dpephos__octylthienyl": {
-  "crowd": 1.48,
-  "overlap": 5,
+  "crowd": 1.44,
+  "overlap": 4,
   "recipe": {
    "declutter": {
     "angles": [
@@ -520,6 +522,7 @@
     "passes": 2
    },
    "push": true,
+   "relief": true,
    "weights": {
     "maxiter": 200,
     "w_angle": 0.61,
@@ -603,7 +606,7 @@
   }
  },
  "dppbz__cyclohexyl": {
-  "crowd": 0.0,
+  "crowd": 0.48,
   "overlap": 0,
   "recipe": {
    "weights": {
@@ -759,7 +762,7 @@
   }
  },
  "dppe__cyclohexyl": {
-  "crowd": 0.0,
+  "crowd": 0.3,
   "overlap": 0,
   "recipe": {
    "weights": {
@@ -898,7 +901,7 @@
   }
  },
  "dppm__cyclohexyl": {
-  "crowd": 0.0,
+  "crowd": 0.07,
   "overlap": 0,
   "recipe": {
    "weights": {
@@ -1184,8 +1187,8 @@
   }
  },
  "named::DTBM-DPEPhos": {
-  "crowd": 1.69,
-  "overlap": 3,
+  "crowd": 1.15,
+  "overlap": 2,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1204,6 +1207,7 @@
     ],
     "passes": 3
    },
+   "relief": true,
    "weights": {
     "maxiter": 116.56299124048628,
     "w_angle": 0.003518362325060531,
@@ -1318,15 +1322,50 @@
   }
  },
  "naphthyl__cyclohexyl": {
-  "crowd": 0.32,
+  "crowd": 0.29,
   "overlap": 0,
   "recipe": {
+   "declutter": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 3
+   },
+   "declutter2": {
+    "angles": [
+     12,
+     -12,
+     24,
+     -24,
+     36,
+     -36,
+     50,
+     -50,
+     68,
+     -68,
+     85,
+     -85
+    ],
+    "passes": 2
+   },
+   "push": true,
    "weights": {
-    "maxiter": 164,
+    "maxiter": 200,
     "w_angle": 0.61,
     "w_bond": 7.96,
-    "w_overlap": 17.49,
-    "w_rigid": 67.3
+    "w_overlap": 34.0,
+    "w_rigid": 72.0
    }
   }
  },
@@ -1491,8 +1530,8 @@
   }
  },
  "segphos__cyclohexyl": {
-  "crowd": 0.77,
-  "overlap": 2,
+  "crowd": 0.9,
+  "overlap": 1,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1805,7 +1844,7 @@
  },
  "xantphos__cyclohexyl": {
   "crowd": 0.44,
-  "overlap": 0,
+  "overlap": 1,
   "recipe": {
    "declutter": {
     "angles": [

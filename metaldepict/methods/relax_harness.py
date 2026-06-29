@@ -94,15 +94,27 @@ class Harness:
         # ---- adjacency + bond kinds ----
         self.adj = {i: [] for i in self.ids}
         self.kind = {}
+        self.order = {}
         self._raw_bonds = []
         for b in sc.bonds:
             self.adj[b.a].append(b.b)
             self.adj[b.b].append(b.a)
             self.kind[frozenset((b.a, b.b))] = b.kind
+            self.order[frozenset((b.a, b.b))] = b.order
             self._raw_bonds.append((b.a, b.b))
 
         # ---- rings + fused ring systems -> rigid bodies ----
         self.rings = self._find_rings()
+        # bulky saturated carbocycles (e.g. cyclohexyl): all-single-bond, all
+        # unlabelled-carbon rings -> they get extra clearance so the layout
+        # pushes them further from everything else.
+        self.bulky = set()
+        for r in self.rings:
+            edges = [frozenset((a, b)) for a in r for b in self.adj[a]
+                     if b in r and b > a]
+            if (edges and all(self.order.get(e, 1) == 1 for e in edges)
+                    and all(not self.label[a] for a in r) and len(r) >= 5):
+                self.bulky |= set(r)
         self.bodies = self._build_bodies()
         self.body_of = {}
         for bi, bd in enumerate(self.bodies):
@@ -274,6 +286,8 @@ class Harness:
                     mn = 0.78 * L
                 else:
                     mn = 0.55 * L
+                if a in self.bulky or b in self.bulky:    # cyclohexyl etc. -- more room
+                    mn *= 1.45
                 out.append((a, b, mn))
         return out
 
@@ -568,6 +582,253 @@ def declutter(H, angles=(10, -10, 20, -20, 32, -32, 45, -45), passes=2):
                     for a in atoms:
                         x, y = orig[a][0] - px, orig[a][1] - py
                         H.pos[a] = (px + cz * x - sz * y, py + sz * x + cz * y)
+
+
+def _p_components(H):
+    """For every P donor: {neighbour -> set of atoms reachable from it with the
+    P bond cut (Cu excluded)} plus which neighbour is the backbone (biggest)."""
+    res = {}
+    for p in H.donors:
+        nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+        if len(nbrs) < 2:
+            continue
+        comp = {}
+        for n in nbrs:
+            seen = {p, n}
+            stack = [n]
+            while stack:
+                x = stack.pop()
+                for y in H.adj[x]:
+                    if y == p or y in seen or H.label[y] == "Cu":
+                        continue
+                    seen.add(y)
+                    stack.append(y)
+            comp[n] = seen - {p}
+        backbone_n = max(nbrs, key=lambda n: len(comp[n]))
+        res[p] = (comp, backbone_n)
+    return res
+
+
+def _aryl_substituent_rings(H):
+    """Candidate aromatic substituent rings for tilting: for each P donor, the
+    5/6-ring carrying the ipso atom of a NON-backbone arm.  Returns
+    (p, ipso, ring_set, component_set) tuples."""
+    out = []
+    rings = [set(r) for r in H.rings]
+    for p, (comp, backbone_n) in _p_components(H).items():
+        for n, atoms in comp.items():
+            if n == backbone_n:
+                continue
+            for r in rings:
+                if n in r and 5 <= len(r) <= 6 and r <= atoms:
+                    out.append((p, n, set(r), set(atoms)))
+                    break
+    return out
+
+
+def _restyle_tilted_ring(H, ring, p, perp):
+    """Redraw `ring` with the ferrocene-Cp perspective once it has been
+    foreshortened: suppress the Kekule doubles, draw the near lateral half with
+    bold (front edge) + taper edges and the far half with dashes, and add an
+    aromatic circle -- the SAME treatment as the Cp rings."""
+    prx, pry = perp
+    px, py = H.pos[p]
+    s = {a: ((H.pos[a][0] - px) * prx + (H.pos[a][1] - py) * pry) for a in ring}
+    cyc = H._ring_cycle(ring)
+    edges = [(cyc[i], cyc[(i + 1) % len(cyc)]) for i in range(len(cyc))]
+    mid = {e: (s[e[0]] + s[e[1]]) / 2 for e in edges}
+    front = max(edges, key=lambda e: mid[e])
+    bonds = {frozenset((b.a, b.b)): b for b in H.scene.bonds}
+    for e in edges:
+        bd = bonds.get(frozenset(e))
+        if bd is None:
+            continue
+        bd.order = 1
+        bd.inside = None
+        if e == front:
+            bd.kind = "bold"
+        elif mid[e] >= 0:                       # near half -> taper to the front
+            lo, hi = (e[0], e[1]) if s[e[0]] <= s[e[1]] else (e[1], e[0])
+            bd.a, bd.b = lo, hi                  # normal width at far vertex...
+            bd.kind = "taper"
+            bd.width = 0.17 * L                  # ...growing toward the near vertex
+        else:                                   # far half -> dashes
+            bd.kind = "dash"
+    H.scene.ring_circle(list(ring), r_frac=0.58)
+
+
+def _exo_subtrees(H, ring):
+    """For each ring atom, the subtrees hanging off it (substituents/labels):
+    {anchor_ring_atom -> [(neighbour, {subtree atom ids})...]}, never crossing
+    back into the ring or into the P donor."""
+    rs = set(ring)
+    res = {}
+    for c in ring:
+        for d in H.adj[c]:
+            if d in rs or H.label[d] == "P" or H.label[d] == "Cu":
+                continue
+            seen = {d}
+            stack = [d]
+            while stack:
+                x = stack.pop()
+                for y in H.adj[x]:
+                    if y in rs or y in seen or H.label[y] in ("P", "Cu"):
+                        continue
+                    seen.add(y)
+                    stack.append(y)
+            res.setdefault(c, []).append((d, seen))
+    return res
+
+
+def tilt_relief(H, squash=0.5):
+    """LAST-RESORT relief for very crowded aromatic substituents: tilt a ring
+    'into the plane of the canvas' -- foreshorten ITS RING ATOMS laterally about
+    the radial spine (the P->ring axis), exactly like the ferrocene Cp rings --
+    so the ring takes up less sideways room WITHOUT poking deeper into the
+    crowded centre (its reach away from P is preserved; only the width
+    collapses).  Each exocyclic substituent / label is then re-hung RIGIDLY off
+    its (foreshortened) ring carbon along its original outward direction, so the
+    decorations keep their fan instead of piling onto the spine.  The near half
+    of the ring is redrawn with bold (front) + taper edges, the far half with
+    dashes, plus an aromatic circle.  Applied greedily, KEPT only if it strictly
+    reduces the overlap count without worsening crowd; else reverted.  Returns
+    the number of rings tilted."""
+    def n_over():
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if _vlen(H.pos[a], H.pos[b]) < mn)
+
+    def ring_over(ring):
+        rs = set(ring)
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if (a in rs or b in rs) and _vlen(H.pos[a], H.pos[b]) < mn)
+
+    cands = [c for c in _aryl_substituent_rings(H) if ring_over(c[2]) > 0]
+    cands.sort(key=lambda c: -ring_over(c[2]))
+
+    tilted = 0
+    for (p, ipso, ring, comp) in cands:
+        if ring_over(ring) == 0:                 # earlier tilt already fixed it
+            continue
+        before_ov, before_cr = n_over(), H._crowd()
+        px, py = H.pos[p]
+        cx = sum(H.pos[a][0] for a in ring) / len(ring)
+        cy = sum(H.pos[a][1] for a in ring) / len(ring)
+        ax, ay = cx - px, cy - py
+        an = math.hypot(ax, ay) or 1e-9
+        ax, ay = ax / an, ay / an                # spine unit (radial, kept)
+        prx, pry = -ay, ax                       # lateral unit (squashed)
+
+        exo = _exo_subtrees(H, ring)
+        orig = {a: H.pos[a] for a in comp}
+        # 1) foreshorten the RING atoms only (about the spine through P)
+        for a in ring:
+            if a in H.pinned:
+                continue
+            rx, ry = H.pos[a][0] - px, H.pos[a][1] - py
+            u = rx * ax + ry * ay
+            v = rx * prx + ry * pry
+            H.pos[a] = (px + u * ax + squash * v * prx,
+                        py + u * ay + squash * v * pry)
+        # 2) re-hang every exocyclic subtree rigidly off its (moved) ring carbon,
+        #    keeping its original bond length + outward direction (no pile-up)
+        for c, subs in exo.items():
+            for (d, atoms) in subs:
+                blen = _vlen(orig[c], orig[d])
+                gx, gy = orig[d][0] - orig[c][0], orig[d][1] - orig[c][1]
+                gn = math.hypot(gx, gy) or 1e-9
+                tgt = (H.pos[c][0] + gx / gn * blen, H.pos[c][1] + gy / gn * blen)
+                dx, dy = tgt[0] - orig[d][0], tgt[1] - orig[d][1]
+                for a in atoms:
+                    if a in H.pinned:
+                        continue
+                    H.pos[a] = (orig[a][0] + dx, orig[a][1] + dy)
+
+        if n_over() < before_ov and H._crowd() <= before_cr + 1e-6:
+            _restyle_tilted_ring(H, ring, p, (prx, pry))
+            tilted += 1
+        else:
+            for a, q in orig.items():
+                H.pos[a] = q
+    return tilted
+
+
+def _backbone_atoms(H):
+    """The set of backbone atoms (the largest non-Cu component hanging off each
+    P), i.e. everything that is NOT a P substituent."""
+    bb = set()
+    for p, (comp, backbone_n) in _p_components(H).items():
+        bb |= comp[backbone_n]
+    return bb
+
+
+def swing_off_backbone(H, max_deg=95, step=5):
+    """Rotate any P substituent that CROSSES THE BACKBONE bodily about its P,
+    scanning +/- up to max_deg, to the angle that minimises (#overlaps it makes
+    with backbone atoms, then its total #overlaps).  Unlike declutter's small
+    steps this clears head-on substituent-on-backbone ring crossings (e.g. a
+    DPEphos P-aryl folded over the diaryl-ether phenyl).  A pure rigid rotation,
+    so ring shapes are preserved and decorations keep their spread."""
+    bb = _backbone_atoms(H)
+
+    def over_with(atoms, against):
+        s = set(atoms)
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if ((a in s and b in against) or (b in s and a in against))
+                   and _vlen(H.pos[a], H.pos[b]) < mn)
+
+    def tot_over(atoms):
+        s = set(atoms)
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if (a in s or b in s) and _vlen(H.pos[a], H.pos[b]) < mn)
+
+    degs = [d for k in range(1, max_deg // step + 1) for d in (k * step, -k * step)]
+    moved = 0
+    for p, (comp, backbone_n) in _p_components(H).items():
+        for n, atoms in comp.items():
+            if n == backbone_n:
+                continue
+            mv = [a for a in atoms if a not in H.pinned]
+            if not mv or over_with(mv, bb) == 0:
+                continue
+            px, py = H.pos[p]
+            orig = {a: H.pos[a] for a in mv}
+            best, bestd = (over_with(mv, bb), tot_over(mv)), 0.0
+            for deg in degs:
+                th = math.radians(deg)
+                c, s = math.cos(th), math.sin(th)
+                for a in mv:
+                    x, y = orig[a][0] - px, orig[a][1] - py
+                    H.pos[a] = (px + c * x - s * y, py + s * x + c * y)
+                cost = (over_with(mv, bb), tot_over(mv))
+                for a in mv:
+                    H.pos[a] = orig[a]
+                if cost < best:
+                    best, bestd = cost, deg
+            if bestd:
+                th = math.radians(bestd)
+                c, s = math.cos(th), math.sin(th)
+                for a in mv:
+                    x, y = orig[a][0] - px, orig[a][1] - py
+                    H.pos[a] = (px + c * x - s * y, py + s * x + c * y)
+                moved += 1
+    return moved
+
+
+def relief_pass(H, squash=0.5):
+    """LAST-RESORT relief for genuinely stubborn cells, applied in order:
+      1. swing any substituent folded over the backbone out into open space,
+      2. a gentle overlap-separation settle,
+      3. tilt a still-crowded aromatic substituent 'into the plane' (foreshorten
+         like a ferrocene Cp) -- self-gated, only kept when it strictly helps.
+    Deterministic, so it reproduces exactly on a cached replay."""
+    swing_off_backbone(H)
+    bodies, pin, inv, translate, _ = body_helpers(H)
+    overlap_relax(H, bodies, pin, inv, translate, w_over=0.5, iters=80)
+    declutter(H, angles=BIG_DECL, passes=2)
+    tilt_relief(H, squash=squash)
+
+
+BIG_DECL = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
 
 
 def quality_loss(H, c=DEFAULT_JUDGE):

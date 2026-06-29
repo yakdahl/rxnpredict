@@ -59,8 +59,8 @@
       "backbone": "segphos",
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/segphos__cyclohexyl.png",
-      "overlap": 2,
-      "bondCV": 0.008
+      "overlap": 1,
+      "bondCV": 0.0854
     },
     {
       "backbone": "segphos",
@@ -115,8 +115,8 @@
       "backbone": "xantphos",
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/xantphos__cyclohexyl.png",
-      "overlap": 0,
-      "bondCV": 0.0068
+      "overlap": 1,
+      "bondCV": 0.0722
     },
     {
       "backbone": "xantphos",
@@ -136,15 +136,15 @@
       "backbone": "dpephos",
       "sub": "dtbm",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__dtbm.png",
-      "overlap": 3,
-      "bondCV": 0.0304
+      "overlap": 2,
+      "bondCV": 0.1174
     },
     {
       "backbone": "dpephos",
       "sub": "biscf3",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__biscf3.png",
-      "overlap": 3,
-      "bondCV": 0.1254
+      "overlap": 1,
+      "bondCV": 0.13
     },
     {
       "backbone": "dpephos",
@@ -164,15 +164,15 @@
       "backbone": "dpephos",
       "sub": "octylthienyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__octylthienyl.png",
-      "overlap": 5,
-      "bondCV": 0.1049
+      "overlap": 4,
+      "bondCV": 0.1051
     },
     {
       "backbone": "dpephos",
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__cyclohexyl.png",
       "overlap": 1,
-      "bondCV": 0.048
+      "bondCV": 0.1197
     },
     {
       "backbone": "dpephos",
@@ -228,7 +228,7 @@
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dppbz__cyclohexyl.png",
       "overlap": 0,
-      "bondCV": 0.0025
+      "bondCV": 0.0024
     },
     {
       "backbone": "dppbz",
@@ -283,8 +283,8 @@
       "backbone": "binap",
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/binap__cyclohexyl.png",
-      "overlap": 2,
-      "bondCV": 0.0094
+      "overlap": 0,
+      "bondCV": 0.0778
     },
     {
       "backbone": "binap",
@@ -340,7 +340,7 @@
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/naphthyl__cyclohexyl.png",
       "overlap": 0,
-      "bondCV": 0.0019
+      "bondCV": 0.0846
     },
     {
       "backbone": "naphthyl",
@@ -396,7 +396,7 @@
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dppe__cyclohexyl.png",
       "overlap": 0,
-      "bondCV": 0.003
+      "bondCV": 0.0031
     },
     {
       "backbone": "dppe",
@@ -452,7 +452,7 @@
       "sub": "cyclohexyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dppm__cyclohexyl.png",
       "overlap": 0,
-      "bondCV": 0.0096
+      "bondCV": 0.0093
     },
     {
       "backbone": "dppm",

@@ -270,17 +270,38 @@ class Scene:
             out.append(f'<polygon points="{t[0]:.2f},{t[1]:.2f} '
                        f'{b1[0]:.2f},{b1[1]:.2f} {b2[0]:.2f},{b2[1]:.2f}" '
                        f'fill="#111"/>')
-        # aromatic-ring circles (ellipses matching the ring's drawn shape)
+        # aromatic-ring circles (ellipses matching the ring's drawn shape, via
+        # the vertex cloud's PRINCIPAL axes -- so a foreshortened / tilted ring
+        # gets a correctly-oriented ellipse, not an axis-aligned bbox blob)
         for vids, rf in self.ring_circles:
-            xs = [self.atoms[i].pos[0] for i in vids]
-            ys = [self.atoms[i].pos[1] for i in vids]
-            cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
-            rx = rf * (max(xs) - min(xs)) / 2.0
-            ry = rf * (max(ys) - min(ys)) / 2.0
+            pts = [self.atoms[i].pos for i in vids]
+            n = len(pts)
+            cx = sum(p[0] for p in pts) / n
+            cy = sum(p[1] for p in pts) / n
+            sxx = syy = sxy = 0.0
+            for (x, y) in pts:
+                dx, dy = x - cx, y - cy
+                sxx += dx * dx
+                syy += dy * dy
+                sxy += dx * dy
+            sxx /= n
+            syy /= n
+            sxy /= n
+            tr = sxx + syy
+            disc = math.sqrt(max(0.0, (tr * 0.5) ** 2 - (sxx * syy - sxy * sxy)))
+            l1, l2 = tr * 0.5 + disc, tr * 0.5 - disc
+            if abs(sxy) > 1e-9:
+                ang = math.atan2(l1 - sxx, sxy)          # major-axis angle
+            else:
+                ang = 0.0 if sxx >= syy else math.pi / 2
+            rx = rf * math.sqrt(2.0 * max(l1, 1e-12))    # =0.58*Rc for a regular ring
+            ry = rf * math.sqrt(2.0 * max(l2, 1e-12))
             X, Y = tx((cx, cy))
+            deg = -math.degrees(ang)                     # SVG y points down
             out.append(f'<ellipse cx="{X:.2f}" cy="{Y:.2f}" rx="{rx * scale:.2f}" '
                        f'ry="{ry * scale:.2f}" fill="none" stroke="#111" '
-                       f'stroke-width="{BOND_W * scale:.2f}"/>')
+                       f'stroke-width="{BOND_W * scale:.2f}" '
+                       f'transform="rotate({deg:.1f} {X:.2f} {Y:.2f})"/>')
 
         fs = FONT * scale
         for a in self.atoms.values():
