@@ -1,43 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1040" viewBox="0 0 1240 1040">
 <rect width="1240" height="1040" fill="#ffffff"/>
 <g stroke-linecap="round" stroke-linejoin="round">
-<line x1="714.99" y1="473.54" x2="748.87" y2="498.36" stroke="#111" stroke-width="3.78"/>
-<line x1="714.99" y1="473.54" x2="719.55" y2="431.78" stroke="#111" stroke-width="3.78"/>
-<line x1="714.99" y1="473.54" x2="689.62" y2="484.71" stroke="#111" stroke-width="3.78"/>
-<line x1="683.87" y1="502.73" x2="698.30" y2="526.91" stroke="#111" stroke-width="3.78"/>
-<line x1="698.30" y1="526.91" x2="680.19" y2="563.84" stroke="#111" stroke-width="3.78"/>
-<line x1="698.30" y1="526.91" x2="740.27" y2="525.19" stroke="#111" stroke-width="3.78"/>
-<line x1="672.45" y1="476.79" x2="664.34" y2="449.77" stroke="#111" stroke-width="3.78"/>
-<line x1="664.34" y1="449.77" x2="626.52" y2="438.74" stroke="#111" stroke-width="3.78"/>
-<line x1="626.52" y1="438.74" x2="610.71" y2="457.57" stroke="#111" stroke-width="3.78"/>
-<line x1="587.44" y1="466.16" x2="563.70" y2="462.21" stroke="#111" stroke-width="3.78"/>
-<line x1="563.70" y1="462.21" x2="543.02" y2="495.47" stroke="#111" stroke-width="3.78"/>
-<line x1="543.02" y1="495.47" x2="554.83" y2="521.37" stroke="#111" stroke-width="3.78"/>
-<line x1="546.94" y1="537.98" x2="520.12" y2="545.00" stroke="#111" stroke-width="3.78"/>
-<line x1="520.12" y1="545.00" x2="509.02" y2="585.51" stroke="#111" stroke-width="3.78"/>
-<line x1="520.12" y1="545.00" x2="490.59" y2="515.14" stroke="#111" stroke-width="3.78"/>
-<line x1="561.95" y1="548.59" x2="564.55" y2="579.25" stroke="#111" stroke-width="3.78"/>
-<line x1="564.55" y1="579.25" x2="528.30" y2="600.46" stroke="#111" stroke-width="3.78"/>
-<line x1="564.55" y1="579.25" x2="600.17" y2="603.45" stroke="#111" stroke-width="3.78"/>
-<line x1="641.00" y1="520.00" x2="647.72" y2="520.00" stroke="#111" stroke-width="3.78"/>
-<line x1="611.64" y1="539.26" x2="606.80" y2="550.41" stroke="#111" stroke-width="3.78"/>
-<line x1="638.33" y1="552.48" x2="630.32" y2="538.29" stroke="#111" stroke-width="3.78"/>
-<line x1="606.35" y1="481.94" x2="612.91" y2="500.23" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
-<line x1="663.90" y1="497.08" x2="638.61" y2="510.28" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
-<line x1="574.63" y1="531.00" x2="599.59" y2="524.95" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="673.52" y1="468.65" x2="673.52" y2="468.65" stroke="#111" stroke-width="3.78"/>
+<line x1="671.02" y1="487.66" x2="671.02" y2="487.66" stroke="#111" stroke-width="3.78"/>
+<line x1="654.85" y1="464.29" x2="641.47" y2="440.22" stroke="#111" stroke-width="3.78"/>
+<line x1="641.47" y1="440.22" x2="603.81" y2="438.69" stroke="#111" stroke-width="3.78"/>
+<line x1="603.81" y1="438.69" x2="593.97" y2="460.43" stroke="#111" stroke-width="3.78"/>
+<line x1="573.82" y1="474.13" x2="550.00" y2="475.28" stroke="#111" stroke-width="3.78"/>
+<line x1="550.00" y1="475.28" x2="536.56" y2="510.69" stroke="#111" stroke-width="3.78"/>
+<line x1="536.56" y1="510.69" x2="552.84" y2="532.87" stroke="#111" stroke-width="3.78"/>
+<line x1="548.51" y1="550.77" x2="548.51" y2="550.77" stroke="#111" stroke-width="3.78"/>
+<line x1="565.43" y1="558.05" x2="565.35" y2="557.77" stroke="#111" stroke-width="3.78"/>
+<line x1="641.00" y1="520.00" x2="628.04" y2="520.00" stroke="#111" stroke-width="3.78"/>
+<line x1="619.29" y1="540.99" x2="618.86" y2="553.53" stroke="#111" stroke-width="3.78"/>
+<line x1="643.94" y1="544.76" x2="634.59" y2="535.10" stroke="#111" stroke-width="3.78"/>
+<line x1="596.16" y1="485.22" x2="608.13" y2="502.68" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="651.85" y1="487.05" x2="634.60" y2="504.90" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
+<line x1="574.47" y1="538.90" x2="600.61" y2="528.05" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
 </g>
-<text x="676.55" y="490.46" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">P</text>
-<text x="676.55" y="490.46" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c87a00">P</text>
-<text x="601.53" y="468.50" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">N</text>
-<text x="601.53" y="468.50" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2c3e9e">N</text>
-<text x="560.75" y="534.36" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">P</text>
-<text x="560.75" y="534.36" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c87a00">P</text>
+<text x="696.31" y="452.87" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" stroke="#ffffff" stroke-width="6.57" fill="#ffffff">iPr</text>
+<text x="696.31" y="452.87" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" fill="#111">iPr</text>
+<text x="661.78" y="476.78" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">P</text>
+<text x="661.78" y="476.78" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c87a00">P</text>
+<text x="688.96" y="508.79" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" stroke="#ffffff" stroke-width="6.57" fill="#ffffff">iPr</text>
+<text x="688.96" y="508.79" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" fill="#111">iPr</text>
+<text x="588.09" y="473.44" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">N</text>
+<text x="588.09" y="473.44" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2c3e9e">N</text>
+<text x="561.28" y="544.38" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">P</text>
+<text x="561.28" y="544.38" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#c87a00">P</text>
+<text x="523.72" y="563.17" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" stroke="#ffffff" stroke-width="6.57" fill="#ffffff">iPr</text>
+<text x="523.72" y="563.17" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" fill="#111">iPr</text>
+<text x="573.40" y="584.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" stroke="#ffffff" stroke-width="6.57" fill="#ffffff">iPr</text>
+<text x="573.40" y="584.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="19.3" font-weight="600" fill="#111">iPr</text>
 <text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Ru</text>
 <text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#5a6470">Ru</text>
-<text x="662.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">H</text>
-<text x="662.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#111">H</text>
-<text x="598.44" y="569.67" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
-<text x="598.44" y="569.67" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
-<text x="648.65" y="570.77" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">CO</text>
-<text x="648.65" y="570.77" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#111">CO</text>
+<text x="642.32" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">H</text>
+<text x="642.32" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#111">H</text>
+<text x="618.15" y="574.52" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
+<text x="618.15" y="574.52" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
+<text x="658.53" y="559.86" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">CO</text>
+<text x="658.53" y="559.86" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#111">CO</text>
 </svg>

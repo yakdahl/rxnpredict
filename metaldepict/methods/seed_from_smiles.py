@@ -60,14 +60,49 @@ LABEL_SYMBOLS = {"P", "O", "N", "S", "B", "Si", "H", "Cl", "Br", "F",
                  "Fe", "Cu", "Ru", "Pd", "Ni", "Rh", "Ir", "Pt", "Co", "Mn",
                  "Zr", "Ti", "Hf", "V", "Cr"}
 
-_ABBR = rdAbbreviations.ParseAbbreviations(
+# Common organic-chemistry substituent abbreviations (from the standard reference
+# list).  Split into ALWAYS-condensed (conventionally drawn as a label) and
+# CROWD-GATED (drawn explicit by default, condensed only when the structure is too
+# crowded -- the optimiser decides).  Order is SPECIFIC -> GENERAL so e.g. Piv/Bn
+# win over the tBu/Ph fragments they contain.
+_ABBR_ALWAYS_STR = (
+    "Piv [*]C(=O)C(C)(C)C Piv Piv\n"             # pivaloyl  (before tBu/Ac)
+    "Boc [*]OC(=O)C(C)(C)C Boc Boc\n"
+    "OAc [*]OC(=O)C OAc AcO\n"
+    "Ac [*]C(=O)C Ac Ac\n"
+    "CO [*]C#O CO CO\n"                          # metal carbonyl M-C#O -> M-CO
+    "CF3 [*]C(F)(F)F CF3 CF3\n"
+    "TMS [*][Si](C)(C)C TMS TMS\n"
     "tBu [*]C(C)(C)C tBu tBu\n"
     "OMe [*]OC OMe MeO\n"
-    "CF3 [*]C(F)(F)F CF3 CF3\n"
+    "OEt [*]OCC OEt EtO\n"
+    "NMe2 [*]N(C)C NMe2 Me2N\n"
     "nOct [*]CCCCCCCC C8H17 C8H17\n"
-    "CO [*]C#O CO CO\n"                          # metal carbonyl M-C#O -> M-CO
-    "Ph [*]c1ccccc1 Ph Ph\n",
-    True, False)
+    "Ph [*]c1ccccc1 Ph Ph\n")
+_ABBR_CROWD_STR = (                              # condensed only when crowded
+    "Bn [*]Cc1ccccc1 Bn Bn\n"                    # benzyl (before Cy/Ph/Et)
+    "Cy [*]C1CCCCC1 Cy Cy\n"                     # cyclohexyl
+    "iPr [*]C(C)C iPr iPr\n"                     # isopropyl
+    "Et [*]CC Et Et\n")
+_ABBR = rdAbbreviations.ParseAbbreviations(_ABBR_ALWAYS_STR, True, False)
+_ABBR_MAX = rdAbbreviations.ParseAbbreviations(
+    _ABBR_ALWAYS_STR + _ABBR_CROWD_STR, True, False)
+
+
+def _condense(cx, abbr):
+    """Condense abbreviations CONSISTENTLY: RDKit only collapses one match per
+    pass, so repeat until the atom count stops changing -- then ALL e.g. four
+    P-tBu groups of a PtBu2 ligand become a t-Bu label, not a mix of label and
+    explicit."""
+    for _ in range(8):
+        try:
+            nxt = rdAbbreviations.CondenseMolAbbreviations(cx, abbr, maxCoverage=1.0)
+        except Exception:
+            return cx
+        if nxt.GetNumAtoms() == cx.GetNumAtoms():
+            return nxt
+        cx = nxt
+    return cx
 
 # Abbreviations whose COORDINATING / attachment atom should face the parent bond,
 # given as (forward, reversed) display forms with the attachment atom written
@@ -85,6 +120,8 @@ ABBR_FORMS = {
     "NMe3": ("NMe3", "Me3N"), "Me3N": ("NMe3", "Me3N"),
     "PPh3": ("PPh3", "Ph3P"), "Ph3P": ("PPh3", "Ph3P"),
     "NH2": ("NH2", "H2N"), "H2N": ("NH2", "H2N"),
+    "OEt": ("OEt", "EtO"), "EtO": ("OEt", "EtO"),
+    "OAc": ("OAc", "AcO"), "AcO": ("OAc", "AcO"),
 }
 
 
@@ -137,7 +174,7 @@ def scene_from_smiles(smiles, name=None, abbreviate=True):
     return scene_from_mol(cx, name, abbreviate=abbreviate), name or "molecule"
 
 
-def scene_from_mol(cx, name=None, abbreviate=True):
+def scene_from_mol(cx, name=None, abbreviate=True, abbr_level="min"):
     """Build a Scene from ANY pre-assembled metal complex RDKit mol (the metal
     already present, donor->metal bonds set as DATIVE/coordinate).  Works for any
     centre in SEED_METALS and any donor atom -- Cu-H bisphosphine, Ru-PNP pincer,
@@ -149,12 +186,13 @@ def scene_from_mol(cx, name=None, abbreviate=True):
     facing the metal (the ferrocene Cp drawing), and replaces the n spokes with a
     single dashed metal->centroid bond.  Returns a Scene whose `.meta` carries
     {metal, exempt, extra_rigid} for the Harness.
+
+    abbr_level: "min" condenses only the conventionally-labelled groups (tBu, OMe,
+    CF3, Ph, CO, ...); "max" ALSO condenses the crowd-gated alkyls (iPr, Cy, Bn,
+    Et) -- the optimiser raises the level when the explicit drawing is too crowded.
     """
     if abbreviate:
-        try:
-            cx = rdAbbreviations.CondenseMolAbbreviations(cx, _ABBR, maxCoverage=1.0)
-        except Exception:
-            pass
+        cx = _condense(cx, _ABBR_MAX if abbr_level == "max" else _ABBR)
     Chem.SanitizeMol(cx)
     rdDepictor.SetPreferCoordGen(False)              # regular polygons
     rdDepictor.Compute2DCoords(cx)

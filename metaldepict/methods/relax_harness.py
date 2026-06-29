@@ -596,7 +596,8 @@ def fan_substituents(H, margin_deg=22.0):
                 H.pos[a] = (px + c_ * x - s_ * y, py + s_ * x + c_ * y)
 
 
-def declutter(H, angles=(10, -10, 20, -20, 32, -32, 45, -45), passes=2):
+def declutter(H, angles=(8, -8, 16, -16, 24, -24, 32, -32, 45, -45, 60, -60,
+                         75, -75), passes=3):
     """SLIGHT in-place rotation to relieve crowding: for each P substituent group
     that participates in an overlap, try small rotations of the WHOLE group about
     its P and keep the one that removes the most local overlaps (never adds one).
@@ -1116,7 +1117,7 @@ def _backbone_atoms(H):
     return bb
 
 
-def swing_off_backbone(H, max_deg=95, step=5):
+def swing_off_backbone(H, max_deg=120, step=3):
     """Rotate any P substituent that CROSSES THE BACKBONE bodily about its P,
     scanning +/- up to max_deg, to the angle that minimises (#overlaps it makes
     with backbone atoms, then its total #overlaps).  Unlike declutter's small
@@ -1169,7 +1170,7 @@ def swing_off_backbone(H, max_deg=95, step=5):
     return moved
 
 
-def uncross(H, pushes=(0.0, 0.14, 0.28, 0.42), max_deg=95, step=5):
+def uncross(H, pushes=(0.0, 0.1, 0.2, 0.32, 0.46, 0.62), max_deg=120, step=3):
     """Resolve substituent CROSSINGS (bonds that visually intersect) and the
     overlaps that go with them.  For each crossing substituent: rotate it about
     its P and, if rotation alone will not separate it, push it radially OUTWARD
@@ -1267,15 +1268,28 @@ BIG_DECL = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
 
 def quality_loss(H, c=DEFAULT_JUDGE):
     """Scalar numerical quality of a (relaxed) Harness -- lower is better."""
+    p = penalties(H, c)
+    return p["total"]
+
+
+def penalties(H, c=DEFAULT_JUDGE):
+    """The judge's penalty TERMS as a dict (exposed so the internal optimisers /
+    polish can target the very metrics they are scored on): bond-length spread,
+    ring regularity, junction angles, coordination lengths, overlaps, crowding,
+    symmetry, and their weighted total."""
     m = H.metrics()
-    return (c["bond"] * m["bondCV"]
-            + c["ring"] * m["ringEdgeCV"]
-            + c["ringang"] * m["ringAngleDev"]
-            + c.get("jang", 0.0) * m.get("angleDevDeg", 0.0)
-            + c["coord"] * m["coordLenErr"]
-            + c["overlap"] * m["overlap"]
-            + c.get("crowd", 0.0) * m.get("crowd", 0.0)
-            + c["sym"] * m["symDev"])
+    terms = {
+        "bond": c["bond"] * m["bondCV"],
+        "ring": c["ring"] * m["ringEdgeCV"],
+        "ringang": c["ringang"] * m["ringAngleDev"],
+        "jang": c.get("jang", 0.0) * m.get("angleDevDeg", 0.0),
+        "coord": c["coord"] * m["coordLenErr"],
+        "overlap": c["overlap"] * m["overlap"],
+        "crowd": c.get("crowd", 0.0) * m.get("crowd", 0.0),
+        "sym": c["sym"] * m["symDev"],
+    }
+    terms["total"] = sum(terms.values())
+    return terms
 
 
 def mean_loss(relax_fn, params, ligands=LIGANDS, judge=DEFAULT_JUDGE):

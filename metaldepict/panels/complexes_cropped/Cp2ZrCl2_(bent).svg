@@ -11,7 +11,7 @@
 <polygon points="634.96,465.73 667.36,492.16 671.65,486.45 637.23,462.71" fill="#111"/>
 <line x1="636.09" y1="464.22" x2="636.72" y2="441.06" stroke="#111" stroke-width="3.78"/>
 <line x1="636.72" y1="441.06" x2="670.74" y2="452.67" stroke="#111" stroke-width="3.78"/>
-<line x1="603.86" y1="533.43" x2="593.53" y2="542.03" stroke="#111" stroke-width="3.78"/>
+<line x1="603.86" y1="533.44" x2="593.53" y2="542.04" stroke="#111" stroke-width="3.78"/>
 <line x1="635.18" y1="534.51" x2="644.90" y2="543.79" stroke="#111" stroke-width="3.78"/>
 <line x1="608.48" y1="502.44" x2="582.93" y2="463.47" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
 <line x1="632.69" y1="503.26" x2="660.83" y2="466.13" stroke="#111" stroke-width="3.78" stroke-dasharray="6.72,5.46"/>
@@ -20,8 +20,8 @@
 <ellipse cx="660.88" cy="465.83" rx="20.75" ry="9.69" fill="none" stroke="#111" stroke-width="3.78" transform="rotate(-143.1 660.88 465.83)"/>
 <text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Zr</text>
 <text x="620.00" y="520.00" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#5a6470">Zr</text>
-<text x="577.39" y="555.47" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
-<text x="577.39" y="555.47" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
-<text x="660.08" y="558.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
-<text x="660.08" y="558.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
+<text x="577.40" y="555.47" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
+<text x="577.40" y="555.47" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
+<text x="660.09" y="558.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" stroke="#ffffff" stroke-width="7.14" fill="#ffffff">Cl</text>
+<text x="660.09" y="558.30" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="21.0" font-weight="600" fill="#2e8b57">Cl</text>
 </svg>

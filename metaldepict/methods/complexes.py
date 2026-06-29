@@ -459,11 +459,14 @@ def _ring_polys(H):
     return polys
 
 
-def _atoms_inside_rings(H):
-    """Atom ids that sit INSIDE a ring polygon they are not part of -- a ligand
-    crammed into a chelate cavity or an aryl ring (the thing to push outside)."""
+def _atoms_inside_rings(H, max_ring=8):
+    """Atom ids that sit INSIDE a small ring (< `max_ring`) they are not part of --
+    a ligand crammed into a chelate cavity or an aryl/aliphatic ring.  A HARD
+    violation: nothing belongs inside a ring of fewer than 8 members."""
     bad = set()
     for cyc in _ring_polys(H):
+        if len(cyc) >= max_ring:                      # large macrocycle -> allowed
+            continue
         ringset = set(cyc)
         poly = [H.pos[a] for a in cyc]
         if len(poly) < 3:
@@ -474,6 +477,18 @@ def _atoms_inside_rings(H):
             if _point_in_poly(H.pos[a], poly):
                 bad.add(a)
     return bad
+
+
+def _collisions(H, frac=0.55):
+    """Number of non-bonded atom pairs that genuinely COLLIDE (separation below
+    `frac`*L) -- distinct from soft label-proximity overlaps.  A hard violation
+    the optimiser must never accept."""
+    n = 0
+    thresh = frac * L
+    for (a, b, mn) in H.overlaps:
+        if math.hypot(H.pos[a][0] - H.pos[b][0], H.pos[a][1] - H.pos[b][1]) < thresh:
+            n += 1
+    return n
 
 
 def _place_ancillaries_outside(H):
@@ -522,13 +537,19 @@ def _place_ancillaries_outside(H):
 
 
 # ---- self-optimisation: weight schedules + relief recipes (the "options") ---- #
+# "crowd" deliberately drops the angle weight and raises bond+overlap, so when the
+# layout is jammed the solver relieves it by STRETCHING bonds before distorting
+# angles (item 3) -- bonds are cheaper to bend than angles.
 WSET = {
     "base": W,
     "hi": WHI,
     "ov": {"w_bond": 5.0, "w_angle": 1.1, "w_overlap": 34.0, "w_rigid": 67.0, "maxiter": 230},
     "ang": {"w_bond": 6.0, "w_angle": 3.4, "w_overlap": 15.0, "w_rigid": 67.0, "maxiter": 240},
     "loose": {"w_bond": 4.0, "w_angle": 1.0, "w_overlap": 12.0, "w_rigid": 55.0, "maxiter": 160},
+    "crowd": {"w_bond": 3.0, "w_angle": 0.7, "w_overlap": 36.0, "w_rigid": 60.0, "maxiter": 300},
 }
+# bonds & angles get the last word, with the rotated/frozen pieces held rigid.
+POLISH_W = {"w_bond": 9.0, "w_angle": 2.6, "w_overlap": 16.0, "w_rigid": 82.0, "maxiter": 340}
 # each recipe is a list of (weight-key, [relief ops]) stages -- run in order, so a
 # recipe = a SCHEDULE of weights and constraints introduced at different times.
 RECIPES = [
@@ -543,7 +564,33 @@ RECIPES = [
                       ("ov", ["uncross"]), ("base", ["declutter", "swing", "uncross"])]),
     ("overlap-heavy", [("ov", ["fan", "outside"]), ("ov", ["declutter", "uncross"]),
                        ("ov", ["declutter", "swing", "uncross"]), ("base", ["uncross"])]),
+    ("crowd-relief", [("base", ["fan", "outside"]), ("crowd", ["declutter", "swing", "uncross"]),
+                      ("crowd", ["declutter", "swing", "uncross"]), ("base", ["uncross"])]),
 ]
+
+
+def polish(H):
+    """FINAL polish (items 4 + 5): hold the CHALLENGING pieces rigid -- the
+    metal/hydride pins, the frozen eta-n discs, and the rotated biaryl ring (whose
+    angle must NOT be re-penalised) -- and re-optimise BOND LENGTHS and ANGLES for
+    everything else, re-extending any bond the fanning left short.  Judge-guided:
+    kept only if it does not add a hard problem and lowers (or holds) the score the
+    judge assigns -- the very penalties the optimiser is graded on (R.penalties)."""
+    rigid = set(H.pinned) | set(getattr(H, "_exempt", set()))
+    f = R._find_biaryl(H)
+    if f:
+        rigid |= set(f[0])
+    before = _score(H)
+    snap = dict(H.pos)
+    saved = set(H.pinned)
+    H.pinned = H.pinned | rigid
+    try:
+        relaxer_energy.relax(H, POLISH_W)
+    finally:
+        H.pinned = saved
+    if _score(H) > before:                            # never let the polish regress
+        H.pos = snap
+    return H
 
 
 def _is_haptic(H):
@@ -723,16 +770,19 @@ def _orient_labels(H):
 
 
 def _score(H):
-    """Problem score, lower = better: bond CROSSINGS first, then OVERLAP count plus
-    the number of atoms crammed INSIDE a ring, then the numerical quality_loss.
-    Any non-zero count is a PROBLEM that keeps the optimiser trying more options."""
+    """Problem score, lower = better, in three tiers:
+      tier 0 (HARD -- never accepted): bond crossings + atoms inside a ring < 8 +
+              real atom collisions.  The optimiser keeps trying until this is 0.
+      tier 1: soft label-proximity overlaps.
+      tier 2: the judge's numerical quality_loss (bond/angle/coord/sym).
+    """
     m = H.metrics()
-    inside = len(_atoms_inside_rings(H))
-    return (m["crossings"], m["overlap"] + inside, round(R.quality_loss(H), 3))
+    hard = m["crossings"] + len(_atoms_inside_rings(H)) + _collisions(H)
+    return (hard, m["overlap"], round(R.quality_loss(H), 3))
 
 
-def _build_one(name, mol, recipe):
-    sc = S.scene_from_mol(mol, name)
+def _build_one(name, mol, recipe, abbr_level="min"):
+    sc = S.scene_from_mol(mol, name, abbr_level=abbr_level)
     meta = getattr(sc, "meta", None) or {}
     H = R.Harness(scene=sc, title=name, metal=meta.get("metal"),
                   exempt=meta.get("exempt") or None,
@@ -743,22 +793,28 @@ def _build_one(name, mol, recipe):
         H = _resettle_after_tilt(H, name, ring)
         R.straighten_biaryl(H)                    # C1/C4 on the biaryl axis
         _group_oa_leaves(H)                       # cis OA pair, outside, collision-free
+    polish(H)                                     # restore bond lengths + angles
     return H
 
 
 def render(name, mol):
-    """Self-optimising render: a haptic metallocene uses the single frozen-core
-    relax; everything else is run through a SEARCH over weight-schedule / relief
-    recipes -- as long as a result still has a crossing or an overlap (a PROBLEM)
-    the optimiser keeps trying more options, keeping the best by the judge and
-    stopping the moment a clean one (0 crossings, 0 overlaps) is found."""
+    """Self-optimising render: every species is run through a SEARCH over
+    weight-schedule / relief recipes AND abbreviation levels.  As long as a result
+    has a HARD problem (a crossing, an atom inside a ring < 8, or a real collision)
+    the optimiser keeps trying more options; it keeps the best by the judge and
+    stops the moment a result is hard-clean with no overlaps.  When the explicit
+    drawing stays crowded it raises the abbreviation level (iPr/Cy/Bn -> labels)."""
     best, bests = None, (99, 99, 1e18)
-    for rname, recipe in [("proven", None)] + RECIPES:   # proven first, then search
-        H = _build_one(name, mol, recipe)
+    attempts = ([("proven", None, "min")]
+                + [(n, r, "min") for n, r in RECIPES]
+                + [("proven", None, "max")]            # crowd-gated abbreviation
+                + [(n, r, "max") for n, r in RECIPES])
+    for rname, recipe, lvl in attempts:
+        H = _build_one(name, mol, recipe, abbr_level=lvl)
         s = _score(H)
         if s < bests:
             bests, best = s, H
-        if s[0] == 0 and s[1] == 0:               # clean -> no problem left to fix
+        if s[0] == 0 and s[1] == 0:               # hard-clean, no overlaps -> done
             break
     _orient_labels(best)
     return best
@@ -807,7 +863,13 @@ def main():
         im.save(p)
     _montage([label[n] for n in ORDER], 4,
              HERE.parent / "panels" / "complexes_gallery.png")
+    # shippable drag/rotate canvas (item 7): one self-contained HTML editor
+    import canvas
+    dicts = [canvas.scene_to_dict(Hs[nm], nm) for nm in ORDER]
+    canvas_path = HERE.parent / "panels" / "complexes_canvas.html"
+    canvas.write_canvas(dicts, str(canvas_path))
     print(f"cropped per-complex PNGs -> {cropdir}")
+    print(f"editable canvas -> {canvas_path}")
     print("done")
 
 
