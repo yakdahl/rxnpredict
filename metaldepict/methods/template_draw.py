@@ -191,6 +191,20 @@ class Scene:
                 out.append(f'<polygon points="{p1[0]:.2f},{p1[1]:.2f} '
                            f'{p2[0]:.2f},{p2[1]:.2f} {p3[0]:.2f},{p3[1]:.2f}" '
                            f'fill="{col}"/>')
+            elif bd.kind == "taper":
+                # trapezoid: NORMAL bond width at `a`, growing to `width` at `b`
+                # (a perspective edge coming toward the viewer)
+                d = vnorm(vsub(pb, pa))
+                pr = perp(d)
+                w = (bd.width if bd.width is not None else WEDGE_WIDE) * scale
+                n = bw
+                a1 = (pa[0] + pr[0] * n / 2, pa[1] + pr[1] * n / 2)
+                a2 = (pa[0] - pr[0] * n / 2, pa[1] - pr[1] * n / 2)
+                b1 = (pb[0] + pr[0] * w / 2, pb[1] + pr[1] * w / 2)
+                b2 = (pb[0] - pr[0] * w / 2, pb[1] - pr[1] * w / 2)
+                out.append(f'<polygon points="{a1[0]:.2f},{a1[1]:.2f} '
+                           f'{b1[0]:.2f},{b1[1]:.2f} {b2[0]:.2f},{b2[1]:.2f} '
+                           f'{a2[0]:.2f},{a2[1]:.2f}" fill="{col}"/>')
             elif bd.kind == "dash":
                 d = vnorm(vsub(pb, pa))
                 pr = perp(d)

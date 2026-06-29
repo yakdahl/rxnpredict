@@ -210,43 +210,45 @@ _PEN_R = L / (2 * math.sin(math.pi / 5))
 _APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
-_CPW = 0.13 * L          # narrow wedge half-width for the Cp perspective edges
+_CPW_BIG = 0.17 * L      # wide end of the Cp perspective edges (== bold width)
 
 
 def _cp_ring(sc, center, squash=0.6):
     """Cyclopentadienyl ring drawn in perspective (classic DPPF style): a
     vertically-squashed pentagon, apex UP, with an inscribed aromatic circle.
-    The bottom FRONT edge is a plain bond; the two edges adjacent to it are thin
-    WEDGES (wide at the front, narrowing back) so the disc reads as tilting out
-    of the plane; the two back edges are plain.  Both rings use the SAME tilt.
-    Vertices (CCW from apex): apex, ML, BL, BR, MR.  Returns the 5 ids."""
+    The bottom FRONT edge is drawn BOLD (it is between the two perspective edges,
+    so it stays big); the two edges adjacent to it TAPER from a normal bond width
+    at the back up to the bold width at the front, so the disc reads as tilting
+    toward the viewer; the two back edges are plain.  Both rings use the SAME
+    tilt.  Vertices (CCW from apex): apex, ML, BL, BR, MR.  Returns (ids, cen)
+    where `cen` is an invisible atom at the ring centre."""
     cx, cy = center
     ang = [90, 162, 234, 306, 18]                     # apex, ML, BL, BR, MR
     ids = [sc.atom((cx + _PEN_R * math.cos(math.radians(a)),
                     cy + _PEN_R * math.sin(math.radians(a)) * squash)) for a in ang]
     apex, ml, bl, br, mr = ids
-    sc.bond(bl, br, order=1)                           # FRONT bottom edge -> plain
-    sc.bond(ml, bl, order=1, kind="wedge", width=_CPW)   # wide at BL (front)
-    sc.bond(mr, br, order=1, kind="wedge", width=_CPW)   # wide at BR (front)
+    sc.bond(bl, br, order=1, kind="bold")             # FRONT edge stays BIG
+    sc.bond(ml, bl, order=1, kind="taper", width=_CPW_BIG)   # normal@back -> big@front
+    sc.bond(mr, br, order=1, kind="taper", width=_CPW_BIG)
     sc.bond(apex, ml, order=1)                         # back edges -> plain
     sc.bond(mr, apex, order=1)
     sc.ring_circle(ids, r_frac=0.58)
-    return ids
+    cen = sc.atom((cx, cy), label="", halo=False)     # ring-centre anchor (eta5)
+    return ids, cen
 
 
 def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25, squash=0.6):
     """Reference-style SANDWICH with both Cp discs tilted the SAME way (apex up):
     upper ring above Fe, lower ring below, Fe labelled in the centre, eta5 drawn
-    as a DASHED line from Fe to the near carbon of each ring."""
+    as a DASHED line from Fe to the CENTRE of each ring.  Returns
+    (fe, upper_ids, lower_ids, centre_ids)."""
     fx, fy = fe_xy
-    up = _cp_ring(sc, (fx, fy + gap), squash=squash)
-    dn = _cp_ring(sc, (fx, fy - gap), squash=squash)
+    up, cu = _cp_ring(sc, (fx, fy + gap), squash=squash)
+    dn, cd = _cp_ring(sc, (fx, fy - gap), squash=squash)
     fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
-    for ids in (up, dn):                              # eta5: dashed Fe-Cp
-        near = min(ids, key=lambda i: math.hypot(
-            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))
-        sc.bond(fe, near, order=1, kind="coord")
-    return fe, up, dn
+    sc.bond(fe, cu, order=1, kind="coord")            # eta5: dashed Fe -> ring centre
+    sc.bond(fe, cd, order=1, kind="coord")
+    return fe, up, dn, [cu, cd]
 
 
 def _cp_right_vertex(sc, ids, want_up):
@@ -262,11 +264,11 @@ def build_ferrocene_bisphosphine(name, psub=None):
     sc = Scene()
     cu, pu, pd = (5.4, 0.0), (3.5, 1.45), (3.5, -1.45)
     c = _MT.core(sc, cu, pu, pd)                          # Cu,H,P's + dashed P-Cu
-    fe, up, dn = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
+    fe, up, dn, cens = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
     sc.bond(c["pu"], _cp_right_vertex(sc, up, True), order=1)   # P on upper Cp
     sc.bond(c["pd"], _cp_right_vertex(sc, dn, False), order=1)  # P on lower Cp
     psub(sc, c)
-    frozen = {fe, *up, *dn}
+    frozen = {fe, *up, *dn, *cens}
     return sc, name, {"exempt": frozen, "extra_rigid": [frozen]}
 
 
@@ -283,7 +285,7 @@ def build_josiphos(name="josiphos", psub_p1=None, psub_p2=None):
     cu = sc.atom((5.4, 0.0), label="Cu", color=CU_COL)
     h = sc.atom((6.55, 0.0), label="H")
     sc.bond(cu, h, order=1)
-    fe, up, dn = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
+    fe, up, dn, cens = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
     # two adjacent upper-Cp carbons on the metal side carry the substituents
     right = sorted(up, key=lambda i: sc.atoms[i].pos[0])[-2:]
     c1, c2 = sorted(right, key=lambda i: sc.atoms[i].pos[1])   # lower, upper
@@ -301,7 +303,7 @@ def build_josiphos(name="josiphos", psub_p1=None, psub_p2=None):
     sc.bond(ch, p2, order=1)
     sc.bond(p2, cu, order=1, kind="coord")
     psub_p2(sc, p2)
-    frozen = {fe, *up, *dn}
+    frozen = {fe, *up, *dn, *cens}
     return sc, name, {"exempt": frozen, "extra_rigid": [frozen]}
 
 
