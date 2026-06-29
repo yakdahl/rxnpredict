@@ -59,7 +59,11 @@ def relaxed(name, smiles=None, weights=None):
     """Return a relaxed Harness for `name`: from SMILES, the registry, or a
     ferrocene tag.  weights default to the global optimum (+ any OVERRIDE)."""
     weights = weights or OVERRIDES.get(name, GLOBAL)
-    if name in FERROCENES or (smiles is None and name in FERROCENES):
+    if name == "josiphos":
+        sc, title, meta = S.build_josiphos(name)
+        H = R.Harness(scene=sc, title=title,
+                      exempt=meta["exempt"], extra_rigid=meta["extra_rigid"])
+    elif name in FERROCENES or (smiles is None and name in FERROCENES):
         sc, title, meta = S.build_ferrocene_bisphosphine(name, FERROCENES[name])
         H = R.Harness(scene=sc, title=title,
                       exempt=meta["exempt"], extra_rigid=meta["extra_rigid"])

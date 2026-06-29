@@ -203,37 +203,96 @@ import method3_template as _MT                            # noqa: E402
 from template_draw import polar                            # noqa: E402
 
 _PEN_R = L / (2 * math.sin(math.pi / 5))
+_APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
-def _cp_ring(sc, center, kek=(2, 1, 2, 1, 1)):
-    """Regular cyclopentadienyl pentagon, vertex 0 pointing right (+x)."""
-    ids = [sc.atom(polar(center, k * 72.0, _PEN_R)) for k in range(5)]
+def _cp_ring(sc, center, apex_deg, kek=(2, 1, 2, 1, 1)):
+    """Cyclopentadienyl pentagon with its apex vertex at `apex_deg` (so the
+    OPPOSITE edge -- the one facing the Fe between the rings -- is flat)."""
+    ids = [sc.atom(polar(center, apex_deg + k * 72.0, _PEN_R)) for k in range(5)]
     for k in range(5):
         sc.bond(ids[k], ids[(k + 1) % 5], order=kek[k], inside=center)
     return ids
 
 
-def build_ferrocene_bisphosphine(name, psub=None):
-    """1,1'-bis(phosphino)ferrocene Cu-H, hardcoded.  psub places the two P
-    substituents per P (default = two Ph each)."""
-    psub = psub or _MT._pphos_phenyls
-    sc = Scene()
-    cu, pu, pd = (5.6, 0.0), (3.6, 1.35), (3.6, -1.35)
-    c = _MT.core(sc, cu, pu, pd)                          # Cu,H,P's + dashed P-Cu
-    fe = sc.atom((1.95, 0.0), label="Fe", color=FE_COL)
-    up = _cp_ring(sc, (1.95, 1.35))
-    dn = _cp_ring(sc, (1.95, -1.35))
-    fpos = sc.atoms[fe].pos
-    for ids in (up, dn):                                  # Fe-(eta5): 2 lines/ring
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.2):
+    """Draw a vertical SANDWICH: upper Cp (apex up) above Fe, lower Cp (apex
+    down) below Fe, with Fe labelled in the centre and eta5 lines to the two
+    facing carbons of each ring.  Returns (fe, upper_ids, lower_ids)."""
+    fx, fy = fe_xy
+    fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
+    up = _cp_ring(sc, (fx, fy + gap), apex_deg=90.0)     # apex up; flat edge down
+    dn = _cp_ring(sc, (fx, fy - gap), apex_deg=270.0)    # apex down; flat edge up
+    for ids in (up, dn):                                  # eta5: lines to facing edge
         near = sorted(ids, key=lambda i: math.hypot(
-            sc.atoms[i].pos[0] - fpos[0], sc.atoms[i].pos[1] - fpos[1]))[:2]
+            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))[:2]
         for i in near:
             sc.bond(fe, i, order=1)
-    sc.bond(c["pu"], up[0], order=1)                     # P on the right Cp vertex
-    sc.bond(c["pd"], dn[0], order=1)
+    return fe, up, dn
+
+
+def _cp_right_vertex(sc, ids, want_up):
+    """The Cp ring carbon on the metal (right) side, upper or lower half."""
+    cand = [i for i in ids if (sc.atoms[i].pos[1] > 0) == want_up] or ids
+    return max(cand, key=lambda i: sc.atoms[i].pos[0])
+
+
+def build_ferrocene_bisphosphine(name, psub=None):
+    """1,1'-bis(phosphino)ferrocene Cu-H (e.g. DPPF), hardcoded sandwich.  psub
+    places the two P substituents per P (default = two Ph each)."""
+    psub = psub or _MT._pphos_phenyls
+    sc = Scene()
+    cu, pu, pd = (5.4, 0.0), (3.5, 1.45), (3.5, -1.45)
+    c = _MT.core(sc, cu, pu, pd)                          # Cu,H,P's + dashed P-Cu
+    fe, up, dn = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
+    sc.bond(c["pu"], _cp_right_vertex(sc, up, True), order=1)   # P on upper Cp
+    sc.bond(c["pd"], _cp_right_vertex(sc, dn, False), order=1)  # P on lower Cp
     psub(sc, c)
     frozen = {fe, *up, *dn}
     return sc, name, {"exempt": frozen, "extra_rigid": [frozen]}
+
+
+def build_josiphos(name="josiphos", psub_p1=None, psub_p2=None):
+    """Josiphos: 1,2-disubstituted ferrocene -- one Cp carbon bears P1 directly,
+    the ADJACENT carbon bears a CH(CH3) tether to P2.  Both P's chelate Cu.
+    Default: P1 = PPh2, P2 = PCy2 (drawn as 'Cy' labels) -- the canonical motif.
+    Both substituents sit on the UPPER Cp; the lower Cp is unsubstituted."""
+    psub_p1 = psub_p1 or (lambda s, pid: (_arm(s, pid, 150, "Ph"),
+                                          _arm(s, pid, 210, "Ph")))
+    psub_p2 = psub_p2 or (lambda s, pid: (_arm(s, pid, -35, "Cy"),
+                                          _arm(s, pid, -95, "Cy")))
+    sc = Scene()
+    cu = sc.atom((5.4, 0.0), label="Cu", color=CU_COL)
+    h = sc.atom((6.55, 0.0), label="H")
+    sc.bond(cu, h, order=1)
+    fe, up, dn = _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.25)
+    # two adjacent upper-Cp carbons on the metal side carry the substituents
+    right = sorted(up, key=lambda i: sc.atoms[i].pos[0])[-2:]
+    c1, c2 = sorted(right, key=lambda i: sc.atoms[i].pos[1])   # lower, upper
+    # P1 directly on c1 (lower-right Cp carbon) -> chelates Cu
+    p1 = sc.atom((3.5, -1.3), label="P", color=P_COL)
+    sc.bond(c1, p1, order=1)
+    sc.bond(p1, cu, order=1, kind="coord")
+    psub_p1(sc, p1)
+    # CH(CH3) tether on c2 -> P2 -> chelates Cu
+    ch = sc.atom((3.0, 1.55))
+    me = sc.atom((2.7, 2.5), label="CH₃", fontscale=0.8)
+    p2 = sc.atom((3.7, 1.2), label="P", color=P_COL)
+    sc.bond(c2, ch, order=1)
+    sc.bond(ch, me, order=1, kind="wedge")
+    sc.bond(ch, p2, order=1)
+    sc.bond(p2, cu, order=1, kind="coord")
+    psub_p2(sc, p2)
+    frozen = {fe, *up, *dn}
+    return sc, name, {"exempt": frozen, "extra_rigid": [frozen]}
+
+
+def _arm(sc, pid, deg, label):
+    p = sc.atoms[pid].pos
+    tip = polar(p, deg, 1.05 * L)
+    tid = sc.atom(tip, label=label)
+    sc.bond(pid, tid, order=1)
+    return tid
 
 
 if __name__ == "__main__":
