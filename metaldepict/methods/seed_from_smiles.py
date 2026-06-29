@@ -211,34 +211,37 @@ _APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
 def _cp_ring(sc, center, apex_deg, squash=1.0):
-    """Cyclopentadienyl ring drawn the REFERENCE way: a flattened pentagon
-    OUTLINE (single edges, no Kekule doubles) with an inscribed aromatic circle.
-    `apex_deg` rotates the ring in place; `squash` (<1) tilts it into a disc."""
+    """Cyclopentadienyl ring drawn the REFERENCE way: a flattened pentagon with
+    an inscribed aromatic circle.  The two FRONT edges (the ones nearest Fe, at
+    the apex) are BOLD so the disc reads as tilting out of the plane; the back
+    edges are normal weight.  `apex_deg` rotates in place; `squash` (<1) tilts."""
     cx, cy = center
     ids = []
     for k in range(5):
         a = math.radians(apex_deg + k * 72.0)
         ids.append(sc.atom((cx + _PEN_R * math.cos(a),
                             cy + _PEN_R * math.sin(a) * squash)))
+    front = {0, 4}                                    # edges incident to apex (id0)
     for k in range(5):
-        sc.bond(ids[k], ids[(k + 1) % 5], order=1)       # outline only
-    sc.ring_circle(ids, r_frac=0.62)                     # aromatic circle
+        sc.bond(ids[k], ids[(k + 1) % 5], order=1,
+                kind="bold" if k in front else "plain")
+    sc.ring_circle(ids, r_frac=0.6)                   # aromatic circle
     return ids
 
 
-def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.15, squash=0.55):
-    """Reference-style vertical SANDWICH: two Cp discs (apex toward Fe, flat edge
-    away) each with an inscribed circle, Fe labelled in the centre, and the eta5
-    drawn as SOLID WEDGES from Fe to the near carbon of each ring -- no explicit
-    Fe-C bonds.  Returns (fe, upper_ids, lower_ids)."""
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.18, squash=0.55):
+    """Reference-style vertical SANDWICH: two Cp discs (apex toward Fe), each with
+    an inscribed circle and BOLD front edges for the tilt, Fe labelled in the
+    centre, and the eta5 drawn as a DASHED line from Fe to the apex carbon of each
+    ring.  Returns (fe, upper_ids, lower_ids)."""
     fx, fy = fe_xy
     up = _cp_ring(sc, (fx, fy + gap), apex_deg=270.0, squash=squash)  # apex down
     dn = _cp_ring(sc, (fx, fy - gap), apex_deg=90.0, squash=squash)   # apex up
     fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
-    for ids in (up, dn):                              # eta5 wedge to the apex C
+    for ids in (up, dn):                              # eta5: dashed Fe-Cp
         near = min(ids, key=lambda i: math.hypot(
             sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))
-        sc.wedge(fe, near, half_w=0.34)
+        sc.bond(fe, near, order=1, kind="coord")
     return fe, up, dn
 
 
