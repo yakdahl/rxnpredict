@@ -307,9 +307,9 @@ def build_josiphos(name="josiphos", psub_p1=None, psub_p2=None):
     return sc, name, {"exempt": frozen, "extra_rigid": [frozen]}
 
 
-def _arm(sc, pid, deg, label):
+def _arm(sc, pid, deg, label, length=1.05):
     p = sc.atoms[pid].pos
-    tip = polar(p, deg, 1.05 * L)
+    tip = polar(p, deg, length * L)
     tid = sc.atom(tip, label=label)
     sc.bond(pid, tid, order=1)
     return tid
@@ -325,6 +325,20 @@ def _aryl_para(sc, pid, deg, para_label, kek=0):
     sc.bond(pid, ids[0], order=1)
     _MT.text_arm(sc, ids[3], _MT.out_angle(sc, center, ids[3]), para_label,
                  length=1.0, fontscale=0.9)
+    return ids
+
+
+def _aryl_35(sc, pid, deg, label, kek=0):
+    """Place a phenyl ring on P carrying TWO meta (3,5) substituent labels --
+    e.g. a bis-3,5-(CF3)2-phenyl P-aryl."""
+    p = sc.atoms[pid].pos
+    ipso = polar(p, deg, L)
+    center = polar(ipso, deg, _MT.HEX_R)
+    ids = _MT.place_hexagon(sc, center, deg + 180.0, kek)
+    sc.bond(pid, ids[0], order=1)
+    for m in (ids[2], ids[4]):                    # the two meta (3 and 5) carbons
+        _MT.text_arm(sc, m, _MT.out_angle(sc, center, m), label,
+                     length=1.0, fontscale=0.9)
     return ids
 
 

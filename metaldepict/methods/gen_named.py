@@ -49,12 +49,47 @@ def _frozen_H(builder, key):
     return H
 
 
+def _extend_p_leaves(H, factor=1.5):
+    """Push every leaf substituent on a P donor (methyl, t-Bu, ... -- anything not
+    in a ring and not the metal) radially further out, lengthening the P-arm so a
+    stereo wedge / dash drawn on it is clearly visible."""
+    for p in H.donors:
+        px, py = H.pos[p]
+        for n in H.adj[p]:
+            if H.label[n] == "Cu" or any(n in r for r in H.rings):
+                continue
+            comp, stack = {n}, [n]
+            while stack:
+                x = stack.pop()
+                for y in H.adj[x]:
+                    if y == p or y in comp:
+                        continue
+                    comp.add(y)
+                    stack.append(y)
+            dx = (H.pos[n][0] - px) * (factor - 1.0)
+            dy = (H.pos[n][1] - py) * (factor - 1.0)
+            for a in comp:
+                H.pos[a] = (H.pos[a][0] + dx, H.pos[a][1] + dy)
+
+
+def _quinoxp():
+    # (S,S)-QuinoxP*: two P-stereocentres (RDKit wedges the P-Me bond on one, dashes
+    # it on the other -> the S,S display).  Extend the P-Me / P-tBu arms so those
+    # wedges / dashes are clearly visible.
+    H = _smiles_H("C[P@@](C(C)(C)C)c1nc2ccccc2nc1[P@@](C)C(C)(C)C",
+                  "(S,S)-QuinoxP*")
+    _extend_p_leaves(H, 1.55)
+    return H
+
+
 def _slj011():
-    # Josiphos SL-J011-1: P(4-CF3-C6H4)2 directly on Cp, CH(CH3)-PtBu2 tether.
-    p1 = lambda s, pid: (S._aryl_para(s, pid, 205, "CF3"),
-                         S._aryl_para(s, pid, 255, "CF3"))
-    p2 = lambda s, pid: (S._arm(s, pid, -30, "t-Bu"),
-                         S._arm(s, pid, 30, "t-Bu"))
+    # Josiphos SL-J011-2 motif: P(3,5-(CF3)2-C6H3)2 directly on Cp, CH(CH3)-PtBu2
+    # tether.  The two bis-3,5-CF3 aryls fan down; the two t-Bu fan up-and-right
+    # (well separated, away from Cu) and reach a little further out.
+    p1 = lambda s, pid: (S._aryl_35(s, pid, 200, "CF3"),
+                         S._aryl_35(s, pid, 268, "CF3"))
+    p2 = lambda s, pid: (S._arm(s, pid, 98, "t-Bu", length=1.5),
+                         S._arm(s, pid, 30, "t-Bu", length=1.5))
     return S.build_josiphos("SL-J011-1", psub_p1=p1, psub_p2=p2)
 
 
@@ -68,8 +103,7 @@ def named():
         "(c2ccccc2)CC[C@H]1c1ccccc1", "(S,S)-Ph-BPE")
     out["DM-SEGPHOS"] = _smiles_H(
         G.ligand_smiles(G.BACKBONES["segphos"], "c1cc(C)cc(C)c1"), "DM-SEGPHOS")
-    out["(S,S)-QuinoxP*"] = _smiles_H(
-        "C[P@@](C(C)(C)C)c1nc2ccccc2nc1[P@@](C)C(C)(C)C", "(S,S)-QuinoxP*")
+    out["(S,S)-QuinoxP*"] = _quinoxp()
     out["(R,R)-Me-DuPhos"] = _smiles_H(
         "C[C@@H]1CC[C@@H](C)[P]1c1ccccc1[P]1[C@H](C)CC[C@H]1C", "(R,R)-Me-DuPhos")
     out["SL-J011-1"] = _frozen_H(_slj011, "SL-J011-1")
