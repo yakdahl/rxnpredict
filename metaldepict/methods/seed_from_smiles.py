@@ -210,26 +210,33 @@ _PEN_R = L / (2 * math.sin(math.pi / 5))
 _APOTHEM = _PEN_R * math.cos(math.pi / 5)
 
 
-def _cp_ring(sc, center, apex_deg, kek=(2, 1, 2, 1, 1)):
-    """Cyclopentadienyl pentagon with its apex vertex at `apex_deg` (so the
-    OPPOSITE edge -- the one facing the Fe between the rings -- is flat)."""
-    ids = [sc.atom(polar(center, apex_deg + k * 72.0, _PEN_R)) for k in range(5)]
+def _cp_ring(sc, center, apex_deg, squash=1.0, kek=(2, 1, 2, 1, 1)):
+    """Cyclopentadienyl pentagon, apex vertex at `apex_deg`, optionally squashed
+    vertically by `squash` (<1) to give the tilted-disc perspective of a drawn
+    ferrocene.  `apex_deg` is the in-place rotation knob for the ring."""
+    cx, cy = center
+    ids = []
+    for k in range(5):
+        a = math.radians(apex_deg + k * 72.0)
+        ids.append(sc.atom((cx + _PEN_R * math.cos(a),
+                            cy + _PEN_R * math.sin(a) * squash)))
     for k in range(5):
         sc.bond(ids[k], ids[(k + 1) % 5], order=kek[k], inside=center)
     return ids
 
 
-def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.2):
-    """Draw a vertical SANDWICH: upper Cp (apex up) above Fe, lower Cp (apex
-    down) below Fe, with Fe labelled in the centre and eta5 lines to the two
-    facing carbons of each ring.  Returns (fe, upper_ids, lower_ids)."""
+def _ferrocene_stack(sc, fe_xy=(1.6, 0.0), gap=1.15, squash=0.62):
+    """Reference-style vertical SANDWICH: two Cp rings drawn as flattened
+    pentagons (apex pointing TOWARD Fe, flat edge away) in perspective, Fe
+    labelled in the centre on a vertical stacking axis, with eta5 spokes from Fe
+    to the three near carbons of each ring.  Returns (fe, upper_ids, lower_ids)."""
     fx, fy = fe_xy
+    up = _cp_ring(sc, (fx, fy + gap), apex_deg=270.0, squash=squash)  # apex down
+    dn = _cp_ring(sc, (fx, fy - gap), apex_deg=90.0, squash=squash)   # apex up
     fe = sc.atom((fx, fy), label="Fe", color=FE_COL)
-    up = _cp_ring(sc, (fx, fy + gap), apex_deg=90.0)     # apex up; flat edge down
-    dn = _cp_ring(sc, (fx, fy - gap), apex_deg=270.0)    # apex down; flat edge up
-    for ids in (up, dn):                                  # eta5: lines to facing edge
+    for ids in (up, dn):                              # eta5 spokes to near edge
         near = sorted(ids, key=lambda i: math.hypot(
-            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))[:2]
+            sc.atoms[i].pos[0] - fx, sc.atoms[i].pos[1] - fy))[:3]
         for i in near:
             sc.bond(fe, i, order=1)
     return fe, up, dn
