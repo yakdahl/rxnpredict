@@ -423,7 +423,8 @@
   }
  },
  "dpephos__furyl": {
-  "crowd": 0.6,
+  "crossings": 0,
+  "crowd": 0.58,
   "overlap": 2,
   "recipe": {
    "declutter": {
@@ -443,30 +444,12 @@
     ],
     "passes": 3
    },
-   "declutter2": {
-    "angles": [
-     12,
-     -12,
-     24,
-     -24,
-     36,
-     -36,
-     50,
-     -50,
-     68,
-     -68,
-     85,
-     -85
-    ],
-    "passes": 2
-   },
-   "push": true,
    "weights": {
-    "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
-    "w_overlap": 34.0,
-    "w_rigid": 72.0
+    "maxiter": 63.980706350950726,
+    "w_angle": 0.43216047269898006,
+    "w_bond": 1.925327515380939,
+    "w_overlap": 22.69162489496489,
+    "w_rigid": 78.96779458399728
    }
   }
  },
@@ -484,7 +467,8 @@
   }
  },
  "dpephos__octylthienyl": {
-  "crowd": 1.44,
+  "crossings": 0,
+  "crowd": 3.01,
   "overlap": 4,
   "recipe": {
    "declutter": {
@@ -563,8 +547,9 @@
   }
  },
  "dpephos__xylyl": {
-  "crowd": 0.79,
-  "overlap": 2,
+  "crossings": 0,
+  "crowd": 0.39,
+  "overlap": 1,
   "recipe": {
    "declutter": {
     "angles": [
@@ -583,6 +568,7 @@
     ],
     "passes": 3
    },
+   "relief": true,
    "weights": {
     "maxiter": 115.65668029354114,
     "w_angle": 0.003978228002832651,
@@ -1279,8 +1265,9 @@
   }
  },
  "named::SL-J011-1": {
-  "crowd": 0.93,
-  "overlap": 2,
+  "crossings": 0,
+  "crowd": 0.34,
+  "overlap": 0,
   "recipe": {
    "declutter": {
     "angles": [
@@ -1300,11 +1287,11 @@
     "passes": 3
    },
    "weights": {
-    "maxiter": 200,
-    "w_angle": 0.61,
-    "w_bond": 7.96,
-    "w_overlap": 30.0,
-    "w_rigid": 72.0
+    "maxiter": 106.49040898384219,
+    "w_angle": 3.456274475163227,
+    "w_bond": 1.0536713825057316,
+    "w_overlap": 29.011917760083534,
+    "w_rigid": 57.681083613711024
    }
   }
  },
@@ -1813,7 +1800,8 @@
   }
  },
  "xantphos__biscf3": {
-  "crowd": 0.77,
+  "crossings": 0,
+  "crowd": 0.53,
   "overlap": 2,
   "recipe": {
    "declutter": {
@@ -1833,12 +1821,13 @@
     ],
     "passes": 3
    },
+   "relief": true,
    "weights": {
-    "maxiter": 181.06204063542714,
-    "w_angle": 2.6864575018880306,
-    "w_bond": 1.1197825166106146,
-    "w_overlap": 24.5290093587608,
-    "w_rigid": 8.08108269596044
+    "maxiter": 200,
+    "w_angle": 0.61,
+    "w_bond": 7.96,
+    "w_overlap": 30.0,
+    "w_rigid": 72.0
    }
   }
  },

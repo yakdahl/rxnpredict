@@ -88,13 +88,23 @@ def ligand_smiles(core_smiles, sub_smiles):
 
 
 def _score(H):
+    # crossings first: two bonds visibly crossing is the worst artefact, ranked
+    # ahead of near-contacts; then overlaps, whitespace, bond uniformity.
     m = H.metrics()
-    return (m["overlap"], round(m.get("crowd", 0.0), 2), round(m["bondCV"], 3))
+    return (m.get("crossings", 0), m["overlap"],
+            round(m.get("crowd", 0.0), 2), round(m["bondCV"], 3))
 
 
 BIG = (12, -12, 24, -24, 36, -36, 50, -50, 68, -68, 85, -85)
 ACCEPT = 2                                   # <= this many overlaps "works well"
 CACHE_PATH = HERE.parent / "panels" / "reopt_cache.json"
+
+
+def _stubborn(H):
+    """A cell needs the heavier re-optimisation if it has ANY bond crossing or
+    more than ACCEPT near-contact overlaps."""
+    m = H.metrics()
+    return m.get("crossings", 0) > 0 or m["overlap"] > ACCEPT
 
 
 def load_cache():
@@ -154,9 +164,9 @@ def best_relax(fresh, key=None, cache=None, force=False):
         apply_recipe(H, rec)
         if best is None or _score(H) < _score(best):
             best, best_rec = H, rec
-        if _score(H)[0] == 0:
+        if not _stubborn(H):
             break
-    if _score(best)[0] > ACCEPT:                       # full reopt only for the poor
+    if _stubborn(best):                               # full reopt only for the poor
         try:
             from scipy.optimize import differential_evolution
 
@@ -175,7 +185,7 @@ def best_relax(fresh, key=None, cache=None, force=False):
                 best, best_rec = H, rec
         except Exception:
             pass
-    if _score(best)[0] > ACCEPT:                       # STILL stubborn -> relief
+    if _stubborn(best):                               # STILL stubborn -> relief
         rec = dict(best_rec, relief=True)
         H = fresh()
         apply_recipe(H, rec)
@@ -184,6 +194,7 @@ def best_relax(fresh, key=None, cache=None, force=False):
     if cache is not None and key is not None:
         m = best.metrics()
         cache[key] = {"recipe": best_rec, "overlap": m["overlap"],
+                      "crossings": m.get("crossings", 0),
                       "crowd": round(m.get("crowd", 0.0), 2)}
     return best, best_rec
 

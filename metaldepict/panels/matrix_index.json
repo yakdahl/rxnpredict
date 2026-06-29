@@ -88,7 +88,7 @@
       "sub": "biscf3",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/xantphos__biscf3.png",
       "overlap": 2,
-      "bondCV": 0.0978
+      "bondCV": 0.0908
     },
     {
       "backbone": "xantphos",
@@ -137,35 +137,35 @@
       "sub": "dtbm",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__dtbm.png",
       "overlap": 2,
-      "bondCV": 0.1174
+      "bondCV": 0.1239
     },
     {
       "backbone": "dpephos",
       "sub": "biscf3",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__biscf3.png",
-      "overlap": 1,
-      "bondCV": 0.13
+      "overlap": 2,
+      "bondCV": 0.1919
     },
     {
       "backbone": "dpephos",
       "sub": "xylyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__xylyl.png",
-      "overlap": 2,
-      "bondCV": 0.003
+      "overlap": 1,
+      "bondCV": 0.0805
     },
     {
       "backbone": "dpephos",
       "sub": "furyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__furyl.png",
       "overlap": 2,
-      "bondCV": 0.037
+      "bondCV": 0.02
     },
     {
       "backbone": "dpephos",
       "sub": "octylthienyl",
       "png": "/home/user/rxnpredict/metaldepict/panels/matrix/dpephos__octylthienyl.png",
       "overlap": 4,
-      "bondCV": 0.1051
+      "bondCV": 0.1149
     },
     {
       "backbone": "dpephos",
