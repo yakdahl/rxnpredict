@@ -65,8 +65,36 @@ _ABBR = rdAbbreviations.ParseAbbreviations(
     "OMe [*]OC OMe MeO\n"
     "CF3 [*]C(F)(F)F CF3 CF3\n"
     "nOct [*]CCCCCCCC C8H17 C8H17\n"
+    "CO [*]C#O CO CO\n"                          # metal carbonyl M-C#O -> M-CO
     "Ph [*]c1ccccc1 Ph Ph\n",
     True, False)
+
+# Abbreviations whose COORDINATING / attachment atom should face the parent bond,
+# given as (forward, reversed) display forms with the attachment atom written
+# FIRST in the forward form.  The renderer centres a label, so to keep the
+# attachment atom next to the bond the label is flipped to the reversed form when
+# the parent sits to the RIGHT of the superatom (M-CO drawn as OC, an aryl-OMe
+# drawn MeO when the ring is on the right, etc.).
+ABBR_FORMS = {
+    "OMe": ("OMe", "MeO"), "MeO": ("OMe", "MeO"),
+    "CO": ("CO", "OC"), "OC": ("CO", "OC"),
+    "CF3": ("CF3", "F3C"), "F3C": ("CF3", "F3C"),
+    "OPh": ("OPh", "PhO"), "PhO": ("OPh", "PhO"),
+    "SMe": ("SMe", "MeS"), "MeS": ("SMe", "MeS"),
+    "NMe2": ("NMe2", "Me2N"), "Me2N": ("NMe2", "Me2N"),
+    "NMe3": ("NMe3", "Me3N"), "Me3N": ("NMe3", "Me3N"),
+    "PPh3": ("PPh3", "Ph3P"), "Ph3P": ("PPh3", "Ph3P"),
+    "NH2": ("NH2", "H2N"), "H2N": ("NH2", "H2N"),
+}
+
+
+def _orient_abbr(label, parent_xy, self_xy):
+    """Pick the (forward|reversed) form of an abbreviation so its attachment atom
+    faces the parent: reversed when the parent is to the RIGHT, forward otherwise."""
+    forms = ABBR_FORMS.get(label)
+    if not forms:
+        return label
+    return forms[1] if parent_xy[0] > self_xy[0] else forms[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -254,17 +282,18 @@ def _subtree(cx, start, ring_set, metal):
     return seen
 
 
-def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.78, squash=0.6):
-    """Re-lay each eta-n ring as a regular perspective polygon, laterally squashed
-    so it reads as a disc tilted toward the viewer, centred `gap`*L from the metal
-    along its assigned direction; substituents ride rigidly with their ring atom.
+def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.62, squash=0.46):
+    """Re-lay each eta-n ring as a perspective disc whose face turns TOWARD the
+    metal: a regular polygon foreshortened ALONG the metal->centroid axis (so that
+    axis is the ellipse's minor axis and the eta-n bond meets the ring centre
+    head-on), full width across.  Centred `gap`*L from the metal; substituents
+    ride rigidly with their ring atom.
 
-    A bare metallocene (no sigma ligand: ferrocene / rhodocene) is drawn the
-    CLASSIC way the existing ferrocene fragment is -- both discs tilted the SAME
-    way (apex up, front/lower edge bold).  When sigma ligands are present (bent
-    metallocene, piano-stool half sandwich) each disc instead points its apex
-    OUTWARD and bolds the edge nearest the metal, so the eta-n face clearly turns
-    toward the centre.  Returns hinfo: per-ring {ring, centroid, edge styles}."""
+    A bare metallocene (no sigma ligand: ferrocene / rhodocene) keeps both discs
+    tilted the SAME way (apex up, front/lower edge bold), the classic ferrocene
+    look.  With sigma ligands (bent metallocene, piano-stool half sandwich) each
+    disc points its apex OUTWARD and bolds the edge nearest the metal.  Returns
+    hinfo: per-ring {ring, centroid, edge styles}."""
     mx, my = pos[metal]
     dirs = _disc_dirs(len(rings), bool(sigma))
     sandwich = not sigma                              # ferrocene-style same tilt
@@ -272,39 +301,45 @@ def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.78, squash=0.6):
     for ring, ddeg in zip(rings, dirs):
         n = len(ring)
         pen_r = L / (2 * math.sin(math.pi / n))
-        u = (math.cos(math.radians(ddeg)), math.sin(math.radians(ddeg)))
+        u = (math.cos(math.radians(ddeg)), math.sin(math.radians(ddeg)))   # foreshorten axis
+        up = (-u[1], u[0])                            # full (major) axis
         center = (mx + gap * L * u[0], my + gap * L * u[1])
-        face = 90.0 if sandwich else ddeg            # apex direction of the disc
+        face = 90.0 if sandwich else ddeg            # apex orientation of the polygon
         fu = (math.cos(math.radians(face)), math.sin(math.radians(face)))
+        fp = (-fu[1], fu[0])
         ring_set = set(ring)
         newpos = {}
         for k, atom in enumerate(ring):
-            th = math.radians(90.0 + 360.0 * k / n + (face - 90.0))
+            th = math.radians(90.0 + 360.0 * k / n)  # local pentagon, apex up
             lx, ly = pen_r * math.cos(th), pen_r * math.sin(th)
-            along = lx * fu[0] + ly * fu[1]
-            perp = (-lx * fu[1] + ly * fu[0]) * squash
-            px = center[0] + along * fu[0] - perp * fu[1]
-            py = center[1] + along * fu[1] + perp * fu[0]
-            newpos[atom] = (px, py)
+            wx = lx * fp[0] + ly * fu[0]             # apex along `face`
+            wy = lx * fp[1] + ly * fu[1]
+            a = (wx * u[0] + wy * u[1]) * squash     # foreshorten along metal axis
+            b = wx * up[0] + wy * up[1]              # full width across
+            newpos[atom] = (center[0] + a * u[0] + b * up[0],
+                            center[1] + a * u[1] + b * up[1])
         for atom in ring:                            # move atom + its substituents
             dx = newpos[atom][0] - pos[atom][0]
             dy = newpos[atom][1] - pos[atom][1]
             for sub in _subtree(cx, atom, ring_set, metal):
                 pos[sub] = (pos[sub][0] + dx, pos[sub][1] + dy)
             pos[atom] = newpos[atom]
-        # which two adjacent vertices define the BOLD front edge: the lowest two
-        # (classic ferrocene front) for a sandwich, else the two nearest the metal.
-        if sandwich:
-            key = lambda a: pos[a][1]                 # lowest y == front
-        else:
-            key = lambda a: math.hypot(pos[a][0] - mx, pos[a][1] - my)
-        near = set(sorted(ring, key=key)[:2])
+        # "wedges toward the forefront": the FRONT (lower, toward-viewer) edge of
+        # the tilted disc is drawn BOLD, the two edges flanking it TAPER (wide end
+        # at the front vertex), the receding edges plain -- the same convention as
+        # the ferrocene Cp and the tilted aryls.  Front = the two lowest vertices,
+        # consistently for both the sandwich and the bent metallocene.
+        front = set(sorted(ring, key=lambda a: pos[a][1])[:2])
         style = {}
         for k in range(n):
             a, b = ring[k], ring[(k + 1) % n]
-            ka, kb = a in near, b in near
-            style[frozenset((a, b))] = ("bold" if ka and kb
-                                        else "taper" if ka or kb else "plain")
+            fa, fb = a in front, b in front
+            if fa and fb:
+                style[frozenset((a, b))] = ("bold",)
+            elif fa or fb:
+                style[frozenset((a, b))] = ("taper", a if fa else b)  # wide at front
+            else:
+                style[frozenset((a, b))] = ("plain",)
         hinfo.append({"ring": ring, "center": center, "style": style})
     return hinfo
 
@@ -328,6 +363,15 @@ def _build_scene(cx, kek, pos, metal=None, hinfo=None):
         lbl = _label_of(a)
         sym = a.GetSymbol()
         col = COLORS.get(sym, "#111")
+        # an abbreviation superatom with a coordinating/attachment atom (OMe, CO,
+        # OPh, NMe3, PPh3, ...) is oriented so that atom faces its parent bond.
+        if lbl in ABBR_FORMS:
+            nbrs = [nb.GetIdx() for nb in a.GetNeighbors()]
+            if nbrs:
+                ax, ay = pos[a.GetIdx()]
+                parent = min(nbrs, key=lambda p: math.hypot(pos[p][0] - ax,
+                                                            pos[p][1] - ay))
+                lbl = _orient_abbr(lbl, pos[parent], pos[a.GetIdx()])
         fs = 0.92 if (a.GetAtomicNum() == 0 and len(lbl) > 2) else 1.0
         idmap[a.GetIdx()] = sc.atom(pos[a.GetIdx()], label=lbl, color=col,
                                     fontscale=fs)
@@ -340,11 +384,19 @@ def _build_scene(cx, kek, pos, metal=None, hinfo=None):
         # a single dashed metal->centroid bond is added after the loop instead.
         if metal in (i, j) and ({i, j} & hap_atoms):
             continue
-        # an edge of an eta-n disc -> perspective styling (bold near / taper / plain)
+        # an edge of an eta-n disc -> perspective styling: bold front edge, tapers
+        # flanking it (wide end toward the viewer), plain receding edges.
         es = hap_edges.get(frozenset((i, j)))
         if es is not None:
-            sc.bond(a, bb, order=1, kind=es,
-                    width=(_CPW_BIG if es == "taper" else None))
+            if es[0] == "taper":
+                wide = es[1]
+                narrow = j if wide == i else i
+                sc.bond(idmap[narrow], idmap[wide], order=1, kind="taper",
+                        width=_CPW_BIG)
+            elif es[0] == "bold":
+                sc.bond(a, bb, order=1, kind="bold")
+            else:
+                sc.bond(a, bb, order=1)
             continue
         # donor->metal coordination is exactly the DATIVE bonds set when the
         # complex was assembled (P/N/O/S/C_ipso -> metal) -> dashed coord bond.

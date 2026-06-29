@@ -360,7 +360,12 @@ def _declutter_metal_leaves(H, clear=0.82):
     if m is None:
         return
     mx, my = H.pos[m]
-    leaves = [n for n in H.adj[m] if len(H.adj[n]) == 1 and n not in H.pinned]
+    # only swing true terminal atoms (halide / hydride); leave abbreviated groups
+    # like Ph or CO where the fan placed them, so a cis OA pair (Pd-Ph next to
+    # Pd-Br) is not pulled apart.
+    halide = {"Cl", "Br", "I", "F", "H", ""}
+    leaves = [n for n in H.adj[m] if len(H.adj[n]) == 1 and n not in H.pinned
+              and H.label.get(n) in halide]
     if not leaves:
         return
     others = [a for a in H.ids if a != m]
@@ -398,43 +403,355 @@ def _declutter_metal_leaves(H, clear=0.82):
         H.pos[n] = (mx + r * math.cos(best), my + r * math.sin(best))
 
 
-def relax_complex(H, fan=True):
+def _point_in_poly(p, poly):
+    x, y = p
+    inside = False
+    n = len(poly)
+    j = n - 1
+    for i in range(n):
+        xi, yi = poly[i]
+        xj, yj = poly[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _bfs_path(H, src, dst, avoid):
+    from collections import deque
+    prev = {src: None}
+    q = deque([src])
+    while q:
+        x = q.popleft()
+        if x == dst:
+            break
+        for y in H.adj[x]:
+            if y == avoid or y in prev:
+                continue
+            prev[y] = x
+            q.append(y)
+    if dst not in prev:
+        return None
+    path, x = [], dst
+    while x is not None:
+        path.append(x)
+        x = prev[x]
+    return path[::-1]
+
+
+def _ring_polys(H):
+    """Every ring's ordered atom-id cycle: the aromatic / aliphatic rings PLUS the
+    chelate metallacycles (metal -> donor -> backbone -> donor -> metal), which the
+    ring finder skips because it never traverses the metal."""
+    polys = [list(H._ring_cycle(r)) for r in H.rings if len(r) >= 3]
+    m = H.metal
+    if m is not None:
+        comps = _metal_components(H)
+        donors = list(H.adj[m])
+        for i in range(len(donors)):
+            for jj in range(i + 1, len(donors)):
+                d1, d2 = donors[i], donors[jj]
+                if d2 not in comps[d1]:
+                    continue                          # not a chelate pair
+                path = _bfs_path(H, d1, d2, avoid=m)
+                if path and 2 <= len(path) <= 9:
+                    polys.append([m] + path)
+    return polys
+
+
+def _atoms_inside_rings(H):
+    """Atom ids that sit INSIDE a ring polygon they are not part of -- a ligand
+    crammed into a chelate cavity or an aryl ring (the thing to push outside)."""
+    bad = set()
+    for cyc in _ring_polys(H):
+        ringset = set(cyc)
+        poly = [H.pos[a] for a in cyc]
+        if len(poly) < 3:
+            continue
+        for a in H.ids:
+            if a in ringset or a == H.metal:
+                continue
+            if _point_in_poly(H.pos[a], poly):
+                bad.add(a)
+    return bad
+
+
+def _place_ancillaries_outside(H):
+    """GENERAL RULE: when the metal sits IN a chelate ring (a multidentate ligand
+    bridges back to it -- Pd-SPhos, the PNP pincer, salen, ...), its monodentate
+    ancillary ligands must go OUTSIDE that ring, not into the chelate cavity.  Each
+    ancillary's whole sub-tree is rotated rigidly about the metal into the exterior
+    arc -- the direction from the chelate centroid out through the metal -- spread
+    adjacently so e.g. a Pd-Ph / Pd-Br oxidative-addition pair stays cis."""
+    m = H.metal
+    if m is None or R._find_biaryl(H) is not None:    # biaryl OA handled separately
+        return
+    mx, my = H.pos[m]
+    comps = _metal_components(H)
+    nbrs = list(comps)
+    chel = [n for n in nbrs if any(o in comps[n] for o in nbrs if o != n)]
+    anc = [n for n in nbrs if n not in chel]
+    if not chel or not anc:
+        return
+    inside = _atoms_inside_rings(H)
+    if not any(comps[n] & inside for n in anc):       # nothing crammed in a ring
+        return
+
+    def ang(a):
+        return math.atan2(H.pos[a][1] - my, H.pos[a][0] - mx)
+    chel_atoms = set().union(*(comps[n] for n in chel))
+    cxx = sum(H.pos[a][0] for a in chel_atoms) / len(chel_atoms)
+    cyy = sum(H.pos[a][1] for a in chel_atoms) / len(chel_atoms)
+    if math.hypot(mx - cxx, my - cyy) < 0.25 * L:     # ligand wraps the metal (salen)
+        dang = sorted(ang(n) for n in chel)           # exterior = mid of largest gap
+        best = (-1.0, 0.0)
+        for i in range(len(dang)):
+            a0 = dang[i]
+            a1 = dang[(i + 1) % len(dang)] + (2 * math.pi if i == len(dang) - 1 else 0)
+            if a1 - a0 > best[0]:
+                best = (a1 - a0, (a0 + a1) / 2)
+        ext = best[1]
+    else:
+        ext = math.atan2(my - cyy, mx - cxx)
+    k = len(anc)
+    arc = math.radians(min(150.0, 52.0 * k))
+    for idx, n in enumerate(sorted(anc, key=ang)):
+        tgt = ext if k == 1 else ext - arc / 2 + arc * (idx + 0.5) / k
+        _rotate_component(H, comps[n], (mx, my),
+                          (tgt - ang(n) + math.pi) % (2 * math.pi) - math.pi)
+
+
+# ---- self-optimisation: weight schedules + relief recipes (the "options") ---- #
+WSET = {
+    "base": W,
+    "hi": WHI,
+    "ov": {"w_bond": 5.0, "w_angle": 1.1, "w_overlap": 34.0, "w_rigid": 67.0, "maxiter": 230},
+    "ang": {"w_bond": 6.0, "w_angle": 3.4, "w_overlap": 15.0, "w_rigid": 67.0, "maxiter": 240},
+    "loose": {"w_bond": 4.0, "w_angle": 1.0, "w_overlap": 12.0, "w_rigid": 55.0, "maxiter": 160},
+}
+# each recipe is a list of (weight-key, [relief ops]) stages -- run in order, so a
+# recipe = a SCHEDULE of weights and constraints introduced at different times.
+RECIPES = [
+    ("baseline", [("base", ["fan", "outside"]), ("hi", []),
+                  ("base", ["declutter", "swing", "uncross"]),
+                  ("base", ["declutter", "swing", "uncross"])]),
+    ("overlap-first", [("ov", ["fan"]), ("base", ["outside"]), ("hi", []),
+                       ("ov", ["declutter", "uncross"]), ("base", ["uncross"])]),
+    ("angle-late", [("loose", ["fan", "outside"]), ("base", ["declutter"]),
+                    ("ang", ["uncross"]), ("base", ["declutter", "uncross"])]),
+    ("relief-heavy", [("base", ["fan", "outside"]), ("base", ["declutter", "swing", "uncross"]),
+                      ("ov", ["uncross"]), ("base", ["declutter", "swing", "uncross"])]),
+    ("overlap-heavy", [("ov", ["fan", "outside"]), ("ov", ["declutter", "uncross"]),
+                       ("ov", ["declutter", "swing", "uncross"]), ("base", ["uncross"])]),
+]
+
+
+def _apply_op(H, op):
+    if op == "fan":
+        if H.metal is not None and len(H.adj[H.metal]) >= 3:
+            metal_fan(H)
+            H.angles = H._angle_targets()
+    elif op == "outside":
+        _place_ancillaries_outside(H)
+        H.angles = H._angle_targets()
+    elif op == "declutter":
+        R.declutter(H, passes=2)
+    elif op == "swing":
+        R.swing_off_backbone(H)
+    elif op == "uncross":
+        R.uncross(H)
+    elif op == "tilt":
+        R.tilt_relief(H)
+
+
+def _run_recipe(H, recipe):
+    if recipe is None:                                # the proven default pipeline
+        return _relax_proven(H)
+    for wkey, ops in recipe:
+        relaxer_energy.relax(H, WSET[wkey])
+        for op in ops:
+            _apply_op(H, op)
+        relaxer_energy.relax(H, WSET[wkey])
+    before = H.metrics()["overlap"]
+    snap = dict(H.pos)
+    _declutter_metal_leaves(H)
+    if H.metrics()["overlap"] > before:
+        H.pos = snap
+    return H
+
+
+def _relax_proven(H):
+    """The proven default: relax, chelate-aware fan + push ancillaries outside any
+    chelate ring (guarded), then declutter/swing/uncross relief.  Tried first; the
+    weight-schedule recipes are only needed when this still leaves a problem."""
     relaxer_energy.relax(H, W)
-    if fan and H.metal is not None and len(H.adj[H.metal]) >= 3:
+    if H.metal is not None and len(H.adj[H.metal]) >= 3:
         before = (H.metrics()["crossings"], H.metrics()["overlap"])
         snap = dict(H.pos)
         metal_fan(H)
+        _place_ancillaries_outside(H)
+        H.angles = H._angle_targets()
         relaxer_energy.relax(H, WHI)
-        after = (H.metrics()["crossings"], H.metrics()["overlap"])
-        if after > before:
+        if (H.metrics()["crossings"], H.metrics()["overlap"]) > before:
             H.pos = snap
     for _ in range(2):
         R.declutter(H, passes=2)
         R.swing_off_backbone(H)
         R.uncross(H)
         relaxer_energy.relax(H, W)
-    if fan:                                       # not on a frozen metallocene core
-        before = H.metrics()["overlap"]
-        snap = dict(H.pos)
-        _declutter_metal_leaves(H)
-        if H.metrics()["overlap"] > before:
-            H.pos = snap
+    before = H.metrics()["overlap"]
+    snap = dict(H.pos)
+    _declutter_metal_leaves(H)
+    if H.metrics()["overlap"] > before:
+        H.pos = snap
+    return H
+
+
+def relax_complex(H, fan=True):
+    """The single, frozen-core relax used for haptic metallocenes (no fan search)."""
+    relaxer_energy.relax(H, W)
+    for _ in range(2):
+        R.declutter(H, passes=2)
+        R.uncross(H)
+        relaxer_energy.relax(H, W)
     return H.metrics()
 
 
-def render(name, mol):
-    """scene_from_mol (eta-n + coord perception) -> Harness -> relax/relief ->
-    biaryl-into-plane tilt.  Returns the relaxed Harness."""
+def _resettle_after_tilt(H, name, ring):
+    """RE-OPTIMISE after a rotation (general rule): freeze the rotated ring -- its
+    new foreshortened shape becomes the rigid target -- and re-relax so the rest of
+    the structure settles AROUND it (the phosphine, OMe arms and metal ligands stop
+    colliding / sitting off-centre).  Rebuilds the Harness so the tilted ring's
+    distances, not the original regular hexagon's, are what the spring solver
+    preserves."""
+    H.commit()
+    H2 = R.Harness(scene=H.scene, title=name, metal=H.metal,
+                   exempt=set(ring), extra_rigid=[set(ring)])
+    H2.pinned = H2.pinned | set(ring)                 # lock the straightened, tilted
+    relaxer_energy.relax(H2, WHI)                     # ring; settle everything around it
+    R.declutter(H2, passes=2)
+    R.uncross(H2)
+    relaxer_energy.relax(H2, W)
+    before = (H2.metrics()["crossings"], H2.metrics()["overlap"])
+    snap = dict(H2.pos)
+    _declutter_metal_leaves(H2)
+    if (H2.metrics()["crossings"], H2.metrics()["overlap"]) > before:
+        H2.pos = snap
+    if H2.metrics()["crossings"] > 0:                 # never leave a bond crossing
+        R.uncross(H2)
+        relaxer_energy.relax(H2, W)
+    return H2
+
+
+def _group_oa_leaves(H):
+    """Place the covalent monodentate ligands (an oxidative-addition pair such as
+    Pd-Ph and Pd-Br) ADJACENT (cis), evenly inside the largest open gap between the
+    dative donors -- so the OA fragment reads as a cis pair, not split across the
+    metal.  Final cosmetic transform (rotates the single leaf atoms about the
+    metal)."""
+    m = H.metal
+    if m is None:
+        return
+    mx, my = H.pos[m]
+    cov = [n for n in H.adj[m] if len(H.adj[n]) == 1
+           and H.kind.get(frozenset((m, n))) not in ("coord", "dative")]
+    others = [n for n in H.adj[m] if n not in cov]
+    if len(cov) < 2 or not others:
+        return
+
+    def ang(a):
+        return math.atan2(H.pos[a][1] - my, H.pos[a][0] - mx)
+    oa = sorted(ang(o) for o in others)
+    best = (-1.0, 0.0)
+    for i in range(len(oa)):
+        a0 = oa[i]
+        a1 = oa[(i + 1) % len(oa)] + (2 * math.pi if i == len(oa) - 1 else 0)
+        if a1 - a0 > best[0]:
+            best = (a1 - a0, a0)
+    span, a0 = best
+    leaves = sorted(cov, key=ang)
+    rr = {n: math.hypot(H.pos[n][0] - mx, H.pos[n][1] - my) for n in leaves}
+    # the donor substituents (e.g. P-cyclohexyls) eat into the gap, so the even
+    # split can collide; try several adjacent placements and keep the cleanest.
+    snap = dict(H.pos)
+    best_pos, best_score = snap, (99, 99)
+    for f0, f1 in ((1 / 3, 2 / 3), (0.45, 0.72), (0.55, 0.82),
+                   (0.30, 0.55), (0.62, 0.88)):
+        H.pos = dict(snap)
+        for fr, n in zip((f0, f1), leaves):
+            tgt = a0 + span * fr
+            H.pos[n] = (mx + rr[n] * math.cos(tgt), my + rr[n] * math.sin(tgt))
+        m_ = H.metrics()
+        score = (m_["crossings"], m_["overlap"])
+        if score < best_score:
+            best_score, best_pos = score, dict(H.pos)
+    H.pos = best_pos
+
+
+def _orient_labels(H):
+    """Re-orient abbreviation labels to the FINAL geometry so each coordinating /
+    attachment atom faces its parent bond (M-CO drawn OC when M is to the right,
+    aryl-OMe drawn MeO when the ring is to the right, ...)."""
+    for i in H.ids:
+        forms = S.ABBR_FORMS.get(H.label.get(i))
+        if not forms or not H.adj[i]:
+            continue
+        xi, yi = H.pos[i]
+        parent = min(H.adj[i], key=lambda p: math.hypot(H.pos[p][0] - xi,
+                                                        H.pos[p][1] - yi))
+        new = S._orient_abbr(H.label[i], H.pos[parent], H.pos[i])
+        H.label[i] = new
+        H.scene.atoms[i].label = new
+
+
+def _score(H):
+    """Problem score, lower = better: bond CROSSINGS first, then OVERLAP count plus
+    the number of atoms crammed INSIDE a ring, then the numerical quality_loss.
+    Any non-zero count is a PROBLEM that keeps the optimiser trying more options."""
+    m = H.metrics()
+    inside = len(_atoms_inside_rings(H))
+    return (m["crossings"], m["overlap"] + inside, round(R.quality_loss(H), 3))
+
+
+def _build_one(name, mol, recipe):
     sc = S.scene_from_mol(mol, name)
     meta = getattr(sc, "meta", None) or {}
-    haptic = bool(meta.get("extra_rigid"))
     H = R.Harness(scene=sc, title=name, metal=meta.get("metal"),
                   exempt=meta.get("exempt") or None,
                   extra_rigid=meta.get("extra_rigid") or None)
-    relax_complex(H, fan=not haptic)
-    if not haptic:
-        R.biaryl_into_plane(H)                    # no-op unless a Pd...Cipso biaryl
+    _run_recipe(H, recipe)
+    ring = R.biaryl_into_plane(H)                 # no-op unless a Pd...Cipso biaryl
+    if ring:
+        H = _resettle_after_tilt(H, name, ring)
+        R.straighten_biaryl(H)                    # C1/C4 on the biaryl axis
+        _group_oa_leaves(H)                       # cis OA pair, outside, collision-free
     return H
+
+
+def render(name, mol):
+    """Self-optimising render: a haptic metallocene uses the single frozen-core
+    relax; everything else is run through a SEARCH over weight-schedule / relief
+    recipes -- as long as a result still has a crossing or an overlap (a PROBLEM)
+    the optimiser keeps trying more options, keeping the best by the judge and
+    stopping the moment a clean one (0 crossings, 0 overlaps) is found."""
+    sc0 = S.scene_from_mol(mol, name)
+    meta0 = getattr(sc0, "meta", None) or {}
+    if meta0.get("extra_rigid"):                  # haptic metallocene -> frozen core
+        H = R.Harness(scene=sc0, title=name, metal=meta0.get("metal"),
+                      exempt=meta0.get("exempt"), extra_rigid=meta0.get("extra_rigid"))
+        relax_complex(H, fan=False)
+        _orient_labels(H)
+        return H
+    best, bests = None, (99, 99, 1e18)
+    for rname, recipe in [("proven", None)] + RECIPES:   # proven first, then search
+        H = _build_one(name, mol, recipe)
+        s = _score(H)
+        if s < bests:
+            bests, best = s, H
+        if s[0] == 0 and s[1] == 0:               # clean -> no problem left to fix
+            break
+    _orient_labels(best)
+    return best
 
 
 # ======================================================================== #

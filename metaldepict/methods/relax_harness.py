@@ -288,7 +288,12 @@ class Harness:
             if n < 2:
                 continue
             if j == self.metal:
-                ideal = 90.0 if n >= 4 else 120.0    # square-planar/oct. vs trigonal
+                # square-planar / octahedral centre -> 90 deg cis angles (the
+                # octahedral hallmark); trigonal for 3-coordinate.  For 5-6
+                # coordinate a rigid pincer / chelate plus the metal_fan spread keep
+                # the trans relationships, so a uniform 90 cis target reads cleanly
+                # without cramming any ligand.
+                ideal = 90.0 if n >= 4 else 120.0
             elif self.label[j] == "P":
                 # 112 deg reads tetrahedral for a 3-bond P, but a 4-bond P (two
                 # substituents + backbone + Cu) can only average 360/4 = 90, so
@@ -746,47 +751,102 @@ def _restyle_tilted_ring(H, ring, perp):
     H.scene.ring_circle(list(ring), r_frac=0.58)
 
 
-def biaryl_into_plane(H, squash=0.5):
-    """Rotate a biaryl-monophosphine's pendant ring ABOUT THE BIARYL AXIS, into
-    the plane of the board, so the metal...C_ipso contact reads cleanly (the SPhos
-    / RuPhos / biaryl-Pd motif).  The ring that both (a) carries the carbon which
-    coordinates the metal through a dashed coord bond and (b) hangs off a BOLD
-    biaryl bond is foreshortened laterally about that bond's direction; its
-    substituents (OMe, ...) are re-hung on the exterior-angle bisector and the
-    near side is redrawn with thickening wedges (perspective depth).  A no-op when
-    there is no such metal...C_ipso biaryl contact.  Apply AFTER the final relax
-    (the tilt is a drawing transform the spring solver would otherwise undo)."""
+def _find_biaryl(H):
+    """The (ring, cipso, partner) of a biaryl-monophosphine's pendant ring: the
+    ring carrying the carbon that coordinates the metal through a dashed coord bond
+    AND hangs off a BOLD biaryl bond.  None if there is no such metal...C_ipso."""
     if H.metal is None:
         return None
     rings = [set(r) for r in H.rings]
     for cipso in list(H.adj[H.metal]):
         if H.label[cipso] or H.kind.get(frozenset((H.metal, cipso))) != "coord":
-            continue                                  # only a coord'd carbon
+            continue
         ring = next((r for r in rings if cipso in r), None)
         if ring is None:
             continue
+        # the biaryl bond's far end is a BOLD-bonded neighbour in a DIFFERENT ring
+        # (after tilting, the ring's own front edge is bold too, so exclude it)
         partner = next((nb for nb in H.adj[cipso]
-                        if H.kind.get(frozenset((cipso, nb))) == "bold"), None)
-        if partner is None:
-            continue
-        _foreshorten_biaryl_ring(H, ring, cipso, partner, squash)
-        return ring
+                        if H.kind.get(frozenset((cipso, nb))) == "bold"
+                        and nb not in ring), None)
+        if partner is not None:
+            return ring, cipso, partner
     return None
 
 
+def _biaryl_component(H, ring):
+    exo = _exo_subtrees(H, ring)
+    return set(ring) | {a for subs in exo.values() for (_, atoms) in subs for a in atoms}
+
+
+def _rotate_about(H, atoms, piv, dth, respect_pins=True):
+    c_, s_ = math.cos(dth), math.sin(dth)
+    px, py = piv
+    for a in atoms:
+        if respect_pins and a in H.pinned:
+            continue
+        x, y = H.pos[a][0] - px, H.pos[a][1] - py
+        H.pos[a] = (px + c_ * x - s_ * y, py + s_ * x + c_ * y)
+
+
+def biaryl_into_plane(H, squash=0.5):
+    """Rotate a biaryl-monophosphine's pendant ring ABOUT THE BIARYL AXIS, into the
+    plane of the board, so the metal...C_ipso contact reads cleanly (the SPhos /
+    RuPhos / biaryl-Pd motif): the ring is straightened onto the biaryl axis,
+    foreshortened laterally, its substituents (OMe) re-hung on the exterior
+    bisector and the near side redrawn with thickening wedges.  Returns the ring
+    (or None).  Apply AFTER the final relax (a drawing transform the solver undoes)."""
+    found = _find_biaryl(H)
+    if not found:
+        return None
+    ring, cipso, partner = found
+    _foreshorten_biaryl_ring(H, ring, cipso, partner, squash)
+    return ring
+
+
+def straighten_biaryl(H):
+    """FINAL alignment: rigidly rotate the (already tilted) biaryl ring about its
+    ipso so the ipso(C1)->para(C4) axis lies straight along the CURRENT biaryl-bond
+    direction -- i.e. C1 and C4 sit ON the bond axis.  Run last, after the
+    surroundings (incl. the partner ring) have settled.  Returns the ring."""
+    found = _find_biaryl(H)
+    if not found:
+        return None
+    ring, cipso, partner = found
+    px, py = H.pos[cipso]
+    para = max(ring, key=lambda a: _vlen(H.pos[a], (px, py)))   # C4, opposite C1
+    bx, by = px - H.pos[partner][0], py - H.pos[partner][1]     # biaryl axis dir
+    dth = (math.atan2(by, bx)
+           - math.atan2(H.pos[para][1] - py, H.pos[para][0] - px))
+    _rotate_about(H, _biaryl_component(H, ring), (px, py), dth, respect_pins=False)
+    return ring
+
+
 def _foreshorten_biaryl_ring(H, ring, pivot_a, partner, squash):
-    """Foreshorten `ring` laterally about the biaryl axis (pivot_a -> ring centroid,
-    parallel to the biaryl bond) and re-hang its exocyclic subtrees on the
-    exterior bisector, then restyle the near side with perspective wedges."""
+    """Make the C_ipso read STRAIGHT on the biaryl bond and tilt the ring into the
+    plane: first rigidly rotate the ring (and its substituents) about the ipso so
+    the ring centroid lies straight along the biaryl axis (partner -> ipso ->
+    centroid collinear), then foreshorten laterally about that axis, re-hang the
+    exocyclic subtrees on the exterior bisector, and restyle the near side with
+    perspective wedges."""
     px, py = H.pos[pivot_a]
-    cx = sum(H.pos[a][0] for a in ring) / len(ring)
-    cy = sum(H.pos[a][1] for a in ring) / len(ring)
-    ax, ay = cx - px, cy - py
-    an = math.hypot(ax, ay) or 1e-9
-    ax, ay = ax / an, ay / an                         # spine (biaryl axis, kept)
-    prx, pry = -ay, ax                                # lateral (squashed = depth)
     exo = _exo_subtrees(H, ring)
     comp = set(ring) | {a for subs in exo.values() for (_, atoms) in subs for a in atoms}
+    # biaryl axis: from the partner ring's ipso through this ipso, extended outward
+    bx, by = px - H.pos[partner][0], py - H.pos[partner][1]
+    bn = math.hypot(bx, by) or 1e-9
+    ax, ay = bx / bn, by / bn                          # spine = biaryl axis
+    # rotate the ring component about the ipso so its ipso->para axis sits on the
+    # biaryl axis (C1 and C4 on the bond axis)
+    para = max(ring, key=lambda a: _vlen(H.pos[a], (px, py)))
+    dth = math.atan2(ay, ax) - math.atan2(H.pos[para][1] - py, H.pos[para][0] - px)
+    c_, s_ = math.cos(dth), math.sin(dth)
+    for a in comp:
+        if a in H.pinned:
+            continue
+        x, y = H.pos[a][0] - px, H.pos[a][1] - py
+        H.pos[a] = (px + c_ * x - s_ * y, py + s_ * x + c_ * y)
+    prx, pry = -ay, ax                                # lateral (squashed = depth)
     orig = {a: H.pos[a] for a in comp}
     rs = set(ring)
     for a in ring:
