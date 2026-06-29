@@ -546,7 +546,21 @@ RECIPES = [
 ]
 
 
+def _is_haptic(H):
+    """True for an eta-n complex (metallocene / half-sandwich): the metal is bonded
+    through a coord bond to a label-less ring-centroid ANCHOR (a degree-1 invisible
+    atom -- distinct from a coord'd C_ipso, which is in a ring), so its disc is a
+    frozen rigid body the fan / outside moves must NOT touch."""
+    m = H.metal
+    return m is not None and any(
+        H.label.get(nb, "") == "" and len(H.adj[nb]) == 1
+        and H.kind.get(frozenset((m, nb))) == "coord"
+        for nb in H.adj[m])
+
+
 def _apply_op(H, op):
+    if op in ("fan", "outside") and _is_haptic(H):    # frozen metallocene core
+        return
     if op == "fan":
         if H.metal is not None and len(H.adj[H.metal]) >= 3:
             metal_fan(H)
@@ -572,11 +586,12 @@ def _run_recipe(H, recipe):
         for op in ops:
             _apply_op(H, op)
         relaxer_energy.relax(H, WSET[wkey])
-    before = H.metrics()["overlap"]
-    snap = dict(H.pos)
-    _declutter_metal_leaves(H)
-    if H.metrics()["overlap"] > before:
-        H.pos = snap
+    if not _is_haptic(H):                              # not on a frozen metallocene
+        before = H.metrics()["overlap"]
+        snap = dict(H.pos)
+        _declutter_metal_leaves(H)
+        if H.metrics()["overlap"] > before:
+            H.pos = snap
     return H
 
 
@@ -585,7 +600,8 @@ def _relax_proven(H):
     chelate ring (guarded), then declutter/swing/uncross relief.  Tried first; the
     weight-schedule recipes are only needed when this still leaves a problem."""
     relaxer_energy.relax(H, W)
-    if H.metal is not None and len(H.adj[H.metal]) >= 3:
+    haptic = _is_haptic(H)
+    if not haptic and H.metal is not None and len(H.adj[H.metal]) >= 3:
         before = (H.metrics()["crossings"], H.metrics()["overlap"])
         snap = dict(H.pos)
         metal_fan(H)
@@ -594,16 +610,18 @@ def _relax_proven(H):
         relaxer_energy.relax(H, WHI)
         if (H.metrics()["crossings"], H.metrics()["overlap"]) > before:
             H.pos = snap
-    for _ in range(2):
+    for _ in range(3 if haptic else 2):               # extra uncross for Cp* methyls
         R.declutter(H, passes=2)
-        R.swing_off_backbone(H)
+        if not haptic:
+            R.swing_off_backbone(H)
         R.uncross(H)
         relaxer_energy.relax(H, W)
-    before = H.metrics()["overlap"]
-    snap = dict(H.pos)
-    _declutter_metal_leaves(H)
-    if H.metrics()["overlap"] > before:
-        H.pos = snap
+    if not haptic:
+        before = H.metrics()["overlap"]
+        snap = dict(H.pos)
+        _declutter_metal_leaves(H)
+        if H.metrics()["overlap"] > before:
+            H.pos = snap
     return H
 
 
@@ -734,14 +752,6 @@ def render(name, mol):
     recipes -- as long as a result still has a crossing or an overlap (a PROBLEM)
     the optimiser keeps trying more options, keeping the best by the judge and
     stopping the moment a clean one (0 crossings, 0 overlaps) is found."""
-    sc0 = S.scene_from_mol(mol, name)
-    meta0 = getattr(sc0, "meta", None) or {}
-    if meta0.get("extra_rigid"):                  # haptic metallocene -> frozen core
-        H = R.Harness(scene=sc0, title=name, metal=meta0.get("metal"),
-                      exempt=meta0.get("exempt"), extra_rigid=meta0.get("extra_rigid"))
-        relax_complex(H, fan=False)
-        _orient_labels(H)
-        return H
     best, bests = None, (99, 99, 1e18)
     for rname, recipe in [("proven", None)] + RECIPES:   # proven first, then search
         H = _build_one(name, mol, recipe)

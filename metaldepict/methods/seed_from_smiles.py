@@ -318,12 +318,26 @@ def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.62, squash=0.46):
             b = wx * up[0] + wy * up[1]              # full width across
             newpos[atom] = (center[0] + a * u[0] + b * up[0],
                             center[1] + a * u[1] + b * up[1])
-        for atom in ring:                            # move atom + its substituents
-            dx = newpos[atom][0] - pos[atom][0]
-            dy = newpos[atom][1] - pos[atom][1]
-            for sub in _subtree(cx, atom, ring_set, metal):
-                pos[sub] = (pos[sub][0] + dx, pos[sub][1] + dy)
+        for atom in ring:
             pos[atom] = newpos[atom]
+        # ring substituents (Cp* methyls, ...) radiate straight OUT from the disc
+        # centre through their ring carbon -- so they splay evenly around the rim
+        # (foreshortened with the disc) instead of bunching at RDKit's flat-ring
+        # directions.  The whole sub-tree rides on the placed first atom.
+        for atom in ring:
+            ox = newpos[atom][0] - center[0]
+            oy = newpos[atom][1] - center[1]
+            ol = math.hypot(ox, oy) or 1e-9
+            ox, oy = ox / ol, oy / ol
+            for nb in cx.GetAtomWithIdx(atom).GetNeighbors():
+                s = nb.GetIdx()
+                if s in ring_set or s == metal:
+                    continue
+                sub = {s} | _subtree(cx, s, ring_set | {atom}, metal)
+                tgt = (newpos[atom][0] + ox * L, newpos[atom][1] + oy * L)
+                dx, dy = tgt[0] - pos[s][0], tgt[1] - pos[s][1]
+                for a in sub:
+                    pos[a] = (pos[a][0] + dx, pos[a][1] + dy)
         # "wedges toward the forefront": the FRONT (lower, toward-viewer) edge of
         # the tilted disc is drawn BOLD, the two edges flanking it TAPER (wide end
         # at the front vertex), the receding edges plain -- the same convention as

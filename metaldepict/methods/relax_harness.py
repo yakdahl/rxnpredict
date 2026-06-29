@@ -774,9 +774,18 @@ def _find_biaryl(H):
     return None
 
 
-def _biaryl_component(H, ring):
+def _biaryl_component(H, ring, partner=None):
+    """The biaryl ring + ITS OWN substituents (OMe, ...), but NOT the partner ring
+    across the biaryl bond -- so rotating it about the ipso moves only this ring
+    relative to the fixed partner."""
     exo = _exo_subtrees(H, ring)
-    return set(ring) | {a for subs in exo.values() for (_, atoms) in subs for a in atoms}
+    comp = set(ring)
+    for subs in exo.values():
+        for (nb, atoms) in subs:
+            if partner is not None and (nb == partner or partner in atoms):
+                continue                              # skip the biaryl partner side
+            comp |= atoms
+    return comp
 
 
 def _rotate_about(H, atoms, piv, dth, respect_pins=True):
@@ -818,7 +827,8 @@ def straighten_biaryl(H):
     bx, by = px - H.pos[partner][0], py - H.pos[partner][1]     # biaryl axis dir
     dth = (math.atan2(by, bx)
            - math.atan2(H.pos[para][1] - py, H.pos[para][0] - px))
-    _rotate_about(H, _biaryl_component(H, ring), (px, py), dth, respect_pins=False)
+    _rotate_about(H, _biaryl_component(H, ring, partner), (px, py), dth,
+                  respect_pins=False)
     return ring
 
 
@@ -831,7 +841,7 @@ def _foreshorten_biaryl_ring(H, ring, pivot_a, partner, squash):
     perspective wedges."""
     px, py = H.pos[pivot_a]
     exo = _exo_subtrees(H, ring)
-    comp = set(ring) | {a for subs in exo.values() for (_, atoms) in subs for a in atoms}
+    comp = _biaryl_component(H, ring, partner)        # ring + OMe, NOT the partner ring
     # biaryl axis: from the partner ring's ipso through this ipso, extended outward
     bx, by = px - H.pos[partner][0], py - H.pos[partner][1]
     bn = math.hypot(bx, by) or 1e-9
@@ -872,6 +882,8 @@ def _foreshorten_biaryl_ring(H, ring, pivot_a, partner, squash):
             ol = math.hypot(ox, oy) or 1e-9
         ox, oy = ox / ol, oy / ol
         for (d, atoms) in subs:
+            if d == partner or d not in orig:         # not the biaryl partner side
+                continue
             blen = _vlen(orig[c], orig[d])
             tgt = (H.pos[c][0] + ox * blen, H.pos[c][1] + oy * blen)
             dx, dy = tgt[0] - orig[d][0], tgt[1] - orig[d][1]
