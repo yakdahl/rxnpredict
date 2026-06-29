@@ -13,6 +13,7 @@ so the picture morphs one substituent-or-backbone edit at a time, 1 s per frame.
 The frames are the fixed-scale renders, so Cu-H stays locked while the rest moves.
 """
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -22,13 +23,29 @@ HERE = Path(__file__).resolve().parent
 PANELS = HERE.parent / "panels"
 
 
-def snake_order(backbones, subs):
-    order = []
-    for i, bk in enumerate(backbones):
-        seq = subs if i % 2 == 0 else list(reversed(subs))
-        for sb in seq:
-            order.append((bk, sb))
-    return order
+def snake_order(backbones, subs, seed=7, turns=10):
+    """Alternate full cyclic sweeps of the two axes -- one cycle, then turn 90
+    deg to the other axis -- with randomised direction.  Consecutive frames
+    change EXACTLY ONE of (backbone, substituent) by one step; each sweep is one
+    full loop of its axis, then it turns; the fixed axis drifts by one per turn so
+    the walk explores the whole grid instead of staying on a cross."""
+    rnd = random.Random(seed)
+    nb, ns = len(backbones), len(subs)
+    i, j = rnd.randrange(nb), rnd.randrange(ns)
+    idxs = [(i, j)]
+    axis = rnd.randrange(2)                       # 0 = sweep substituents
+    for _ in range(turns):
+        d = rnd.choice((1, -1))
+        if axis == 0:
+            for _ in range(ns - 1):
+                j = (j + d) % ns
+                idxs.append((i, j))
+        else:
+            for _ in range(nb - 1):
+                i = (i + d) % nb
+                idxs.append((i, j))
+        axis ^= 1
+    return [(backbones[a], subs[b]) for a, b in idxs]
 
 
 def main():

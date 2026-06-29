@@ -39,19 +39,25 @@ BACKBONES = {                       # bare-P cores (each P gets 2 substituents)
     "dppbz":    "c1ccc(P)c(P)c1",
     "binap":    "Pc1ccc2ccccc2c1-c1c(P)ccc2ccccc12",
     "naphthyl": "Pc1cccc2cccc(P)c12",
+    "dppe":     "PCCP",
+    "dppm":     "PCP",
 }
 SUBSTITUENTS = {                    # attachment atom = atom 0
     "dtbm":   "c1cc(C(C)(C)C)c(OC)c(C(C)(C)C)c1",
     "biscf3": "c1cc(C(F)(F)F)cc(C(F)(F)F)c1",
+    "xylyl":  "c1cc(C)cc(C)c1",
     "furyl":  "c1ccco1",
     "octylthienyl": "c1sccc1CCCCCCCC",
     "cyclohexyl": "C1CCCCC1",
     "tbu":    "C(C)(C)C",
+    "methyl": "C",
 }
 PRETTY = {"segphos": "SEGPhos", "xantphos": "Xantphos", "dpephos": "DPEphos",
           "dppbz": "DPPBz", "binap": "BINAP", "naphthyl": "1,8-naphthyl",
-          "dtbm": "DTBM", "biscf3": "3,5-(CF3)2C6H3", "furyl": "2-furyl",
-          "octylthienyl": "3-octyl-2-thienyl", "cyclohexyl": "Cy", "tbu": "t-Bu"}
+          "dppe": "DPPE", "dppm": "DPPM",
+          "dtbm": "DTBM", "biscf3": "3,5-(CF3)2C6H3", "xylyl": "3,5-Me2C6H3",
+          "furyl": "2-furyl", "octylthienyl": "3-octyl-2-thienyl",
+          "cyclohexyl": "Cy", "tbu": "t-Bu", "methyl": "Me"}
 
 # ---- fixed render frame: every image identical canvas + scale + Cu anchor ----
 CANVAS = (1180, 980)
@@ -91,6 +97,8 @@ def relaxed_cell(backbone, sub):
         H = R.Harness(scene=sc2, title=f"{backbone}_{sub}")
         weights = dict(GLOBAL, w_overlap=30.0, w_rigid=72.0, maxiter=200)
         relaxer_energy.relax(H, weights)
+        if H.metrics()["overlap"] > 0:           # slight in-place rotations last
+            R.declutter(H)
     return H, smi, weights
 
 

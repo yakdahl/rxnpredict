@@ -513,6 +513,63 @@ def fan_substituents(H, margin_deg=22.0):
                 H.pos[a] = (px + c_ * x - s_ * y, py + s_ * x + c_ * y)
 
 
+def declutter(H, angles=(10, -10, 20, -20, 32, -32, 45, -45), passes=2):
+    """SLIGHT in-place rotation to relieve crowding: for each P substituent group
+    that participates in an overlap, try small rotations of the WHOLE group about
+    its P and keep the one that removes the most local overlaps (never adds one).
+    Conservative -- only crowded groups move, ring shapes are preserved."""
+    def local_cost(atoms):
+        s = set(atoms)
+        return sum(1 for (a, b, mn) in H.overlaps
+                   if (a in s or b in s) and _vlen(H.pos[a], H.pos[b]) < mn)
+
+    for _ in range(passes):
+        for p in H.donors:
+            nbrs = [n for n in H.adj[p] if H.label[n] != "Cu"]
+            if len(nbrs) < 2:
+                continue
+            comp = {}
+            for n in nbrs:
+                seen = {p, n}
+                stack = [n]
+                while stack:
+                    x = stack.pop()
+                    for y in H.adj[x]:
+                        if y == p or y in seen or H.label[y] == "Cu":
+                            continue
+                        seen.add(y)
+                        stack.append(y)
+                comp[n] = seen - {p}
+            backbone_n = max(nbrs, key=lambda n: len(comp[n]))
+            for n in nbrs:
+                if n == backbone_n:
+                    continue
+                atoms = [a for a in comp[n] if a not in H.pinned]
+                if not atoms or local_cost(atoms) == 0:
+                    continue
+                px, py = H.pos[p]
+                orig = {a: H.pos[a] for a in atoms}
+                best_cost = local_cost(atoms)
+                best_deg = 0.0
+                for deg in angles:
+                    th = math.radians(deg)
+                    cz, sz = math.cos(th), math.sin(th)
+                    for a in atoms:
+                        x, y = orig[a][0] - px, orig[a][1] - py
+                        H.pos[a] = (px + cz * x - sz * y, py + sz * x + cz * y)
+                    cst = local_cost(atoms)
+                    for a in atoms:
+                        H.pos[a] = orig[a]
+                    if cst < best_cost:
+                        best_cost, best_deg = cst, deg
+                if best_deg:
+                    th = math.radians(best_deg)
+                    cz, sz = math.cos(th), math.sin(th)
+                    for a in atoms:
+                        x, y = orig[a][0] - px, orig[a][1] - py
+                        H.pos[a] = (px + cz * x - sz * y, py + sz * x + cz * y)
+
+
 def quality_loss(H, c=DEFAULT_JUDGE):
     """Scalar numerical quality of a (relaxed) Harness -- lower is better."""
     m = H.metrics()
