@@ -892,7 +892,15 @@ def _foreshorten_biaryl_ring(H, ring, pivot_a, partner, squash):
                 if a in H.pinned:
                     continue
                 H.pos[a] = (orig[a][0] + dx, orig[a][1] + dy)
-    _restyle_tilted_ring(H, ring, (prx, pry))
+    # keep the ring's KEKULE double bonds (consistent with the flat partner ring),
+    # just re-point each double's offset toward the NEW (foreshortened) centroid
+    # instead of replacing them with an aromatic-circle/wedge restyle.
+    ncx = sum(H.pos[a][0] for a in ring) / len(ring)
+    ncy = sum(H.pos[a][1] for a in ring) / len(ring)
+    rs = set(ring)
+    for b in H.scene.bonds:
+        if b.a in rs and b.b in rs and b.order == 2:
+            b.inside = (ncx, ncy)
 
 
 def _exo_subtrees(H, ring):

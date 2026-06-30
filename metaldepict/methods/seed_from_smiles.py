@@ -387,20 +387,22 @@ def _layout_haptic_discs(pos, metal, rings, sigma, cx, gap=1.62, squash=0.46):
                 dx, dy = tgt[0] - pos[s][0], tgt[1] - pos[s][1]
                 for a in sub:
                     pos[a] = (pos[a][0] + dx, pos[a][1] + dy)
-        # "wedges toward the forefront": the FRONT (lower, toward-viewer) edge of
-        # the tilted disc is drawn BOLD, the two edges flanking it TAPER (wide end
-        # at the front vertex), the receding edges plain -- the same convention as
-        # the ferrocene Cp and the tilted aryls.  Front = the two lowest vertices,
-        # consistently for both the sandwich and the bent metallocene.
-        front = set(sorted(ring, key=lambda a: pos[a][1])[:2])
+        # "wedges toward the forefront": the single FRONT edge -- the ring edge
+        # whose MIDPOINT is most toward the viewer (lowest y) -- is drawn BOLD, the
+        # two edges flanking it TAPER (wide end at the front), the receding edges
+        # plain.  Choosing the front by edge-midpoint (not by vertex) keeps the
+        # bold edge centred at the bottom even after the disc is spun, so it never
+        # ends up off to one side.
+        fk = min(range(n), key=lambda k: (pos[ring[k]][1] + pos[ring[(k + 1) % n]][1]) / 2)
         style = {}
         for k in range(n):
             a, b = ring[k], ring[(k + 1) % n]
-            fa, fb = a in front, b in front
-            if fa and fb:
+            if k == fk:
                 style[frozenset((a, b))] = ("bold",)
-            elif fa or fb:
-                style[frozenset((a, b))] = ("taper", a if fa else b)  # wide at front
+            elif k == (fk - 1) % n:
+                style[frozenset((a, b))] = ("taper", b)   # wide end = front vertex
+            elif k == (fk + 1) % n:
+                style[frozenset((a, b))] = ("taper", a)
             else:
                 style[frozenset((a, b))] = ("plain",)
         hinfo.append({"ring": ring, "center": center, "style": style})

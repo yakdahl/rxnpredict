@@ -243,9 +243,10 @@ class Scene:
                         toward = vnorm(vsub(bd.inside, mid))
                         if (toward[0] * pr[0] + toward[1] * pr[1]) < 0:
                             pr = (-pr[0], -pr[1])
-                    gap = DOUBLE_GAP
-                    sh = DOUBLE_SHRINK
-                    iA = (A2[0] + pr[0] * gap + d[0] * sh,
+                        gap, sh = DOUBLE_GAP, DOUBLE_SHRINK   # ring: offset + inset
+                    else:
+                        gap, sh = DOUBLE_GAP, 0.0             # terminal C=O / C=N:
+                    iA = (A2[0] + pr[0] * gap + d[0] * sh,    # full-length second line
                           A2[1] + pr[1] * gap + d[1] * sh)
                     iB = (B2[0] + pr[0] * gap - d[0] * sh,
                           B2[1] + pr[1] * gap - d[1] * sh)

@@ -572,6 +572,32 @@ RECIPES = [
 ]
 
 
+def _extend_stubs(H, target=1.0, min_frac=0.86):
+    """Re-extend leaf substituents (iPr / Cy / tBu / OMe ... labels and terminal
+    atoms) that the relax left on a STUB bond, pushing each outward along its bond
+    to the standard length L when there is room (no new collision/crossing) -- so a
+    group with empty space behind it is not drawn on a tiny bond."""
+    tgt = target * L
+    for leaf in list(H.ids):
+        if leaf in H.pinned or len(H.adj[leaf]) != 1:
+            continue
+        anchor = H.adj[leaf][0]
+        ax, ay = H.pos[anchor]
+        dx, dy = H.pos[leaf][0] - ax, H.pos[leaf][1] - ay
+        d = math.hypot(dx, dy)
+        if d >= min_frac * tgt or d < 1e-6:
+            continue
+        before = (H.metrics()["crossings"] + len(_atoms_inside_rings(H)) + _collisions(H),
+                  H.metrics()["overlap"])
+        old = H.pos[leaf]
+        H.pos[leaf] = (ax + dx / d * tgt, ay + dy / d * tgt)
+        after = (H.metrics()["crossings"] + len(_atoms_inside_rings(H)) + _collisions(H),
+                 H.metrics()["overlap"])
+        if after > before:                            # no room -> leave the stub
+            H.pos[leaf] = old
+    return H
+
+
 def polish(H):
     """FINAL polish (items 4 + 5): hold the CHALLENGING pieces rigid -- the
     metal/hydride pins, the frozen eta-n discs, and the rotated biaryl ring (whose
@@ -593,6 +619,7 @@ def polish(H):
         H.pinned = saved
     if _score(H) > before:                            # never let the polish regress
         H.pos = snap
+    _extend_stubs(H)                                  # pull short leaf stubs out to L
     return H
 
 
