@@ -28,6 +28,18 @@ from src import chem                            # noqa: E402
 GLOBAL = G.GLOBAL
 CANVAS, SCALE, ANCHOR = (1180, 980), 44.0, (740.0, 490.0)
 
+# Windows forbids  < > : " / \ | ? *  in filenames, so a display name like
+# "(S,S)-QuinoxP*" cannot be a path there (git checkout aborts on it).  The pretty
+# name is kept for the on-drawing title; only the file STEM is sanitised.
+_WIN_FORBIDDEN = {"<": "_", ">": "_", ":": "_", '"': "_", "/": "_",
+                  "\\": "_", "|": "_", "?": "_", "*": "star"}
+
+
+def _slug(name):
+    """Filesystem-safe stem for a display name (portable across Windows/macOS/Linux)."""
+    s = "".join(_WIN_FORBIDDEN.get(c, c) for c in name)
+    return s.rstrip(" .") or "fig"
+
 
 _CACHE = {}
 
@@ -208,11 +220,11 @@ def main():
         H.commit()
         svg = H.scene.render_svg(*CANVAS, title=nm, fixed_scale=SCALE,
                                  anchor_world=H.pos[H.metal], anchor_px=ANCHOR)
-        sp = outdir / f"{nm}.svg"
+        sp = outdir / f"{_slug(nm)}.svg"
         sp.write_text(svg)
         svgs.append(str(sp))
-        pngs.append(str(outdir / f"{nm}.png"))
-        label[nm] = str(outdir / f"{nm}.png")
+        pngs.append(str(outdir / f"{_slug(nm)}.png"))
+        label[nm] = str(outdir / f"{_slug(nm)}.png")
         print(f"{nm:26s} overlap={H.metrics()['overlap']}")
     R._svg_to_png(svgs, pngs)
     _montage([label[n] for n in FIG1], 4, HERE.parent / "panels" / "named_fig1.png")
@@ -226,10 +238,10 @@ def main():
         H.commit()
         svg = H.scene.render_svg(*CANVAS, title=None, fixed_scale=SCALE,
                                  anchor_world=H.pos[H.metal], anchor_px=ANCHOR)
-        sp = cropdir / f"{nm}.svg"
+        sp = cropdir / f"{_slug(nm)}.svg"
         sp.write_text(svg)
         csvgs.append(str(sp))
-        cpngs.append(str(cropdir / f"{nm}.png"))
+        cpngs.append(str(cropdir / f"{_slug(nm)}.png"))
     R._svg_to_png(csvgs, cpngs)
     for p in cpngs:
         _crop(p, p)
